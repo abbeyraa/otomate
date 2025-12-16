@@ -5,7 +5,7 @@
 PrivyLens sekarang berfungsi sebagai **Automation Plan Builder** untuk otomasi input form berbasis browser.
 
 - Fase **perancangan** automasi dilakukan di UI Next.js (halaman `/automate`, yang juga menjadi homepage).
-- Fase **eksekusi teknis** dilakukan oleh **Playwright Runner** terpisah yang menjalankan browser nyata berdasarkan *Automation Plan* yang dihasilkan.
+- Fase **eksekusi teknis** dilakukan oleh **Playwright Runner** terpisah yang menjalankan browser nyata berdasarkan _Automation Plan_ yang dihasilkan.
 - PrivyLens **tidak lagi** mengeksekusi JavaScript di browser target secara langsung maupun menyimpan logika DOM-detail di UI.
 
 Arsitektur ini memastikan pemisahan tegas antara:
@@ -22,17 +22,20 @@ Arsitektur ini memastikan pemisahan tegas antara:
 Halaman utama `/` merender halaman `automate` yang menyediakan:
 
 - **Konfigurasi target halaman**
+
   - Target URL
   - Metode sesi: `new` (sesi baru) atau `reuse` (menggunakan sesi login yang sudah ada)
   - Optional `sessionId` untuk mengikat ke sesi tertentu
   - Page Ready Indicator (selector / text / URL pattern) untuk memastikan halaman benar-benar siap diinteraksikan sebelum Playwright mulai bekerja
 
 - **Konfigurasi sumber data**
+
   - Upload file **CSV/XLSX** atau input manual di tabel
   - Mode eksekusi: `single` (satu baris) atau `batch` (semua baris)
   - Pratinjau data (beberapa baris pertama) agar pengguna memahami dataset yang akan dijalankan
 
 - **Pemetaan field form berbasis maksud bisnis** (bukan selector DOM)
+
   - Nama field yang mudah dipahami pengguna (mis. "Nama Lengkap", "Email", "Status")
   - Tipe input: `text`, `select`, `checkbox`, `radio`, `textarea`
   - Kunci data (`dataKey`) yang mengacu ke kolom data
@@ -44,6 +47,7 @@ Halaman utama `/` merender halaman `automate` yang menyediakan:
     - Hanya isi jika elemen tertentu muncul (`elementExists`)
 
 - **Definisi alur aksi eksplisit**
+
   - Jenis aksi:
     - `fill` – mengisi field berdasarkan mapping
     - `click` – menekan tombol/elemen
@@ -72,7 +76,7 @@ Setelah konfigurasi selesai, PrivyLens menghasilkan **Automation Plan** dalam be
   },
   "dataSource": {
     "type": "upload",
-    "rows": [ { "nama": "A", "email": "a@example.com" } ],
+    "rows": [{ "nama": "A", "email": "a@example.com" }],
     "mode": "batch"
   },
   "fieldMappings": [
@@ -223,10 +227,12 @@ Endpoint ini **belum** diimplementasikan di repo ini dan perlu Anda sediakan sen
 ## Prinsip Desain dan Pemisahan Fase
 
 1. **PrivyLens mengelola niat & konfigurasi**:
+
    - Tidak menyimpan selector DOM teknis di UI
    - Semua yang didefinisikan bersifat konseptual (field bisnis, label, aksi logis)
 
 2. **Playwright Runner mengeksekusi di browser**:
+
    - Mengambil Automation Plan sebagai input immutable
    - Melakukan pencarian elemen yang robust berdasarkan label & strategi locator berlapis
    - Meng-handle variasi DOM secara defensif

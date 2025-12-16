@@ -1,7 +1,8 @@
-// API base URL untuk layanan pendukung (misalnya extractor CSV/XLSX).
-// Secara default mengarah ke backend eksternal. Ubah ke "/api" jika
-// Anda membungkusnya dengan Next.js API route / reverse proxy.
-const API_BASE_URL = "http://localhost:8000";
+// Ekstrak CSV/XLSX langsung di FE (tidak lagi lewat backend)
+// Menggunakan library: papaparse untuk CSV, sheetjs untuk XLSX
+
+import Papa from "papaparse";
+import * as XLSX from "xlsx";
 
 /**
  * Ekstrak semua baris dari file CSV/XLSX ke array of object.
@@ -12,26 +13,33 @@ const API_BASE_URL = "http://localhost:8000";
  * @returns {Promise<Array<Object>>}
  */
 export async function extractAllRows(file, sheetName = null) {
-  const formData = new FormData();
-  formData.append("file", file);
+  const ext = file.name.split(".").pop().toLowerCase();
 
-  const params = new URLSearchParams();
-  if (sheetName) params.append("sheet_name", sheetName);
-
-  const response = await fetch(
-    `${API_BASE_URL}/variables/extract-rows?${params}`,
-    {
-      method: "POST",
-      body: formData,
-    }
-  );
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(data.detail || "Failed to extract rows");
+  if (ext === "csv") {
+    return new Promise((resolve, reject) => {
+      Papa.parse(file, {
+        header: true,
+        skipEmptyLines: true,
+        complete: (results) => {
+          resolve(results.data);
+        },
+        error: (err) => reject(err),
+      });
+    });
   }
 
-  return data.rows;
+  if (["xlsx", "xls"].includes(ext)) {
+    const data = await file.arrayBuffer();
+    const workbook = XLSX.read(data, { type: "array" });
+    const targetSheet =
+      sheetName && workbook.Sheets[sheetName]
+        ? sheetName
+        : workbook.SheetNames[0];
+    const ws = workbook.Sheets[targetSheet];
+    return XLSX.utils.sheet_to_json(ws, { defval: "" });
+  }
+
+  throw new Error("File type not supported. Please upload CSV or XLSX.");
 }
 
 /**
@@ -41,18 +49,33 @@ export async function extractAllRows(file, sheetName = null) {
  * @returns {Promise<Array<string>>}
  */
 export async function getXlsxSheets(file) {
-  const formData = new FormData();
-  formData.append("file", file);
-
-  const response = await fetch(`${API_BASE_URL}/variables/xlsx-sheets`, {
-    method: "POST",
-    body: formData,
-  });
-
-  const data = await response.json();
-  if (!response.ok) {
-    throw new Error(data.detail || "Failed to get sheets");
+  const ext = file.name.split(".").pop().toLowerCase();
+  if (!["xlsx", "xls"].includes(ext)) {
+    throw new Error("File is not an XLSX/XLS file");
   }
+  const data = await file.arrayBuffer();
+  const workbook = XLSX.read(data, { type: "array" });
+  return workbook.SheetNames;
+}
 
-  return data.sheets;
+/**
+ * Jalankan Automation Plan menggunakan Playwright Runner.
+ * Fungsi ini sekarang memanggil runAutomation dari app/actions/runAutomation.js
+ *
+ * @param {Object} plan Automation Plan final yang dihasilkan UI
+ * @returns {Promise<Object>} Laporan eksekusi dari Runner
+ */
+export async function runAutomationPlan(plan) {
+  try {
+    // Import dinamis server action untuk menghindari error di client-side
+    const { runAutomation } = await import("../app/actions/runAutomation");
+    const report = await runAutomation(plan);
+    return report;
+  } catch (error) {
+    console.error("Automation execution error:", error);
+    throw new Error(
+      error.message ||
+        "Gagal menjalankan automation plan. Pastikan Playwright sudah terinstall dan dijalankan di server-side."
+    );
+  }
 }

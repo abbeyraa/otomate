@@ -32,16 +32,16 @@ export default function ExecutionReport({ report }) {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6">
-      <h2 className="text-xl font-semibold text-gray-800 mb-4">
+    <div className="bg-white rounded-lg shadow-md p-3">
+      <h2 className="text-base font-semibold text-gray-800 mb-2">
         Laporan Eksekusi
       </h2>
 
       {/* Summary */}
       {report.summary && (
-        <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-          <h3 className="font-semibold text-gray-700 mb-2">Ringkasan</h3>
-          <div className="grid grid-cols-3 gap-4 text-sm">
+        <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+          <h3 className="font-semibold text-gray-700 mb-2 text-sm">Ringkasan</h3>
+          <div className="grid grid-cols-3 gap-3 text-xs">
             <div>
               <span className="text-gray-600">Total:</span>{" "}
               <span className="font-semibold">{report.summary.total || 0}</span>
@@ -64,22 +64,23 @@ export default function ExecutionReport({ report }) {
 
       {/* Error Message */}
       {report.status === "error" && report.message && (
-        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-          <p className="text-red-800 font-medium">Error:</p>
-          <p className="text-red-600 text-sm mt-1">{report.message}</p>
+        <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+          <p className="text-red-800 font-medium text-sm">Error:</p>
+          <p className="text-red-600 text-xs mt-1">{report.message}</p>
         </div>
       )}
 
       {/* Results */}
       {report.results && report.results.length > 0 && (
-        <div className="space-y-3">
-          <h3 className="font-semibold text-gray-700 mb-2">
+        <details className="space-y-2">
+          <summary className="cursor-pointer font-semibold text-gray-700 mb-2 text-sm hover:text-gray-900">
             Detail Hasil ({report.results.length} baris)
-          </h3>
+          </summary>
+          <div className="space-y-2 mt-2">
           {report.results.map((result, idx) => (
             <div
               key={idx}
-              className={`border-2 rounded-lg p-4 ${getStatusColor(result.status)}`}
+              className={`border-2 rounded-lg p-3 ${getStatusColor(result.status)}`}
             >
               <div className="flex items-start justify-between">
                 <div className="flex-1">
@@ -97,57 +98,51 @@ export default function ExecutionReport({ report }) {
 
                   {/* Data Used */}
                   {result.data && (
-                    <div className="mt-2 text-sm">
+                    <div className="mt-1 text-xs">
                       <span className="font-medium">Data:</span>{" "}
-                      {JSON.stringify(result.data)}
+                      {JSON.stringify(result.data).substring(0, 100)}
+                      {JSON.stringify(result.data).length > 100 && "..."}
                     </div>
                   )}
 
                   {/* Actions Executed */}
                   {result.actions && result.actions.length > 0 && (
-                    <div className="mt-2 text-sm">
-                      <span className="font-medium">Aksi yang Dieksekusi:</span>
-                      <ul className="list-disc list-inside ml-2 mt-1">
-                        {result.actions.map((action, actIdx) => (
-                          <li key={actIdx}>
-                            {action.type} → {action.target}
-                            {action.success !== undefined && (
-                              <span className={action.success ? "text-green-600" : "text-red-600"}>
-                                {" "}
-                                ({action.success ? "✓" : "✗"})
-                              </span>
-                            )}
-                          </li>
-                        ))}
-                      </ul>
+                    <div className="mt-1 text-xs">
+                      <span className="font-medium">Aksi:</span>{" "}
+                      {result.actions.map((action, actIdx) => (
+                        <span key={actIdx} className="mr-2">
+                          {action.type}→{action.target}
+                          {action.success !== undefined && (
+                            <span className={action.success ? "text-green-600" : "text-red-600"}>
+                              {action.success ? "✓" : "✗"}
+                            </span>
+                          )}
+                        </span>
+                      ))}
                     </div>
                   )}
 
                   {/* Error Details */}
                   {result.error && (
-                    <div className="mt-2 text-sm">
+                    <div className="mt-1 text-xs">
                       <span className="font-medium">Error:</span>{" "}
-                      <span className="text-red-600">{result.error}</span>
+                      <span className="text-red-600">{result.error.substring(0, 80)}</span>
+                      {result.error.length > 80 && "..."}
                     </div>
                   )}
 
                   {/* Warnings */}
                   {result.warnings && result.warnings.length > 0 && (
-                    <div className="mt-2 text-sm">
-                      <span className="font-medium">Peringatan:</span>
-                      <ul className="list-disc list-inside ml-2 mt-1">
-                        {result.warnings.map((warning, warnIdx) => (
-                          <li key={warnIdx} className="text-yellow-700">
-                            {warning}
-                          </li>
-                        ))}
-                      </ul>
+                    <div className="mt-1 text-xs">
+                      <span className="font-medium">Peringatan:</span>{" "}
+                      {result.warnings.join(", ").substring(0, 80)}
+                      {result.warnings.join(", ").length > 80 && "..."}
                     </div>
                   )}
 
                   {/* Duration */}
                   {result.duration && (
-                    <div className="mt-2 text-xs text-gray-600">
+                    <div className="mt-1 text-xs text-gray-600">
                       Durasi: {result.duration}ms
                     </div>
                   )}
@@ -155,12 +150,13 @@ export default function ExecutionReport({ report }) {
               </div>
             </div>
           ))}
-        </div>
+          </div>
+        </details>
       )}
 
       {/* No Results */}
       {(!report.results || report.results.length === 0) && (
-        <p className="text-gray-500 text-center py-8">
+        <p className="text-gray-500 text-center py-4 text-sm">
           Belum ada hasil eksekusi
         </p>
       )}

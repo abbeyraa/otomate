@@ -234,3 +234,8 @@ test_smoke.sh
 
 test_smoke.ps1
 
+# Playwright
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/

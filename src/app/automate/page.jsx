@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { extractAllRows, getXlsxSheets } from "@/lib/api";
+import { runAutomation } from "@/app/actions/runAutomation";
 import TargetConfiguration from "./components/TargetConfiguration";
 import DataSourceSection from "./components/DataSourceSection";
 import FieldMappingSection from "./components/FieldMappingSection";
@@ -13,18 +14,26 @@ import ExecutionReport from "./components/ExecutionReport";
  * Automation Plan Structure:
  * {
  *   target: {
- *     url: string,
- *     sessionMethod: "new" | "reuse",
- *     sessionId?: string,
+ *     url: string, // URL halaman target (contoh: /transactions)
  *     pageReadyIndicator: {
  *       type: "selector" | "text" | "url",
  *       value: string
- *     }
+ *     },
+ *     login?: {
+ *       url: string,
+ *       username: string,
+ *       password: string
+ *     },
+ *     navigation?: Array<{
+ *       type: "click" | "navigate" | "wait",
+ *       target?: string,
+ *       duration?: number
+ *     }>
  *   },
  *   dataSource: {
  *     type: "upload" | "manual",
  *     rows: Array<Object>,
- *     mode: "single" | "batch"
+ *     mode: "single" | "batch" // batch akan loop actions untuk setiap baris
  *   },
  *   fieldMappings: Array<{
  *     name: string,
@@ -39,14 +48,14 @@ import ExecutionReport from "./components/ExecutionReport";
  *     }
  *   }>,
  *   actions: Array<{
- *     type: "fill" | "click" | "wait" | "handleDialog",
- *     target: string, // field name atau selector
+ *     type: "fill" | "click" | "wait" | "handleDialog" | "navigate",
+ *     target: string, // field name, selector, atau URL
  *     value?: any,
  *     waitFor?: {
  *       type: "selector" | "text" | "url",
  *       value: string
  *     }
- *   }>,
+ *   }>, // Aksi di halaman target, akan di-loop untuk batch mode
  *   successIndicator: {
  *     type: "selector" | "text" | "url",
  *     value: string
@@ -61,8 +70,11 @@ import ExecutionReport from "./components/ExecutionReport";
 export default function AutomatePage() {
   // Target Configuration
   const [targetUrl, setTargetUrl] = useState("");
-  const [sessionMethod, setSessionMethod] = useState("new");
-  const [sessionId, setSessionId] = useState("");
+  const [requiresLogin, setRequiresLogin] = useState(false);
+  const [loginUrl, setLoginUrl] = useState("");
+  const [loginUsername, setLoginUsername] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [navigationSteps, setNavigationSteps] = useState([]);
   const [pageReadyType, setPageReadyType] = useState("selector");
   const [pageReadyValue, setPageReadyValue] = useState("");
 
@@ -137,14 +149,20 @@ export default function AutomatePage() {
     const plan = {
       target: {
         url: targetUrl.trim(),
-        sessionMethod: sessionMethod,
-        ...(sessionMethod === "reuse" && sessionId
-          ? { sessionId: sessionId.trim() }
-          : {}),
         pageReadyIndicator: {
           type: pageReadyType,
           value: pageReadyValue.trim(),
         },
+        ...(requiresLogin && {
+          login: {
+            url: loginUrl.trim(),
+            username: loginUsername.trim(),
+            password: loginPassword.trim(),
+          },
+        }),
+        ...(navigationSteps.length > 0 && {
+          navigation: navigationSteps,
+        }),
       },
       dataSource: {
         type: dataSourceType,
@@ -198,6 +216,21 @@ export default function AutomatePage() {
       return;
     }
 
+    if (requiresLogin) {
+      if (!loginUrl.trim()) {
+        alert("Login URL harus diisi");
+        return;
+      }
+      if (!loginUsername.trim()) {
+        alert("Username harus diisi");
+        return;
+      }
+      if (!loginPassword.trim()) {
+        alert("Password harus diisi");
+        return;
+      }
+    }
+
     if (!effectiveRows.length) {
       alert("Data source harus diisi");
       return;
@@ -225,25 +258,13 @@ export default function AutomatePage() {
     setExecutionReport(null);
 
     try {
-      // Send to Playwright Runner
-      const response = await fetch("/api/automation/run", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Execution failed: ${response.statusText}`);
-      }
-
-      const report = await response.json();
+      const report = await runAutomation(plan);
       setExecutionReport(report);
     } catch (error) {
       console.error("Execution error:", error);
       setExecutionReport({
         status: "error",
         message: error.message,
-        results: [],
       });
     } finally {
       setIsExecuting(false);
@@ -252,97 +273,114 @@ export default function AutomatePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-bl from-[#f7faff] via-[#ecf2ff] to-[#fafafb]">
-      <div className="mx-auto max-w-7xl px-4 py-10">
-        <div className="mb-8 text-center">
-          <p className="text-base font-medium text-[#3b82f6] uppercase tracking-wide">
+      <div className="mx-auto max-w-[1800px] px-4 py-3">
+        <div className="mb-3 text-center">
+          <p className="text-xs font-medium text-[#3b82f6] uppercase tracking-wide">
             Automation Plan Builder
           </p>
-          <h1 className="mt-1 text-4xl font-bold text-[#1a1a1a] drop-shadow-sm">
+          <h1 className="mt-1 text-xl font-bold text-[#1a1a1a] drop-shadow-sm">
             Rancang Rencana Otomasi Form
           </h1>
-          <p className="mt-3 text-lg text-[#586581] max-w-2xl mx-auto">
+          <p className="mt-1 text-xs text-[#586581] max-w-2xl mx-auto">
             Definisikan tujuan automasi, sumber data, dan aturan pengisian form
             secara konseptual. Eksekusi teknis ditangani oleh Playwright Runner
             secara terpisah.
           </p>
         </div>
 
-        <div className="space-y-6">
-          {/* Target Configuration */}
-          <TargetConfiguration
-            targetUrl={targetUrl}
-            setTargetUrl={setTargetUrl}
-            sessionMethod={sessionMethod}
-            setSessionMethod={setSessionMethod}
-            sessionId={sessionId}
-            setSessionId={setSessionId}
-            pageReadyType={pageReadyType}
-            setPageReadyType={setPageReadyType}
-            pageReadyValue={pageReadyValue}
-            setPageReadyValue={setPageReadyValue}
-          />
-
-          {/* Data Source */}
-          <DataSourceSection
-            dataSourceType={dataSourceType}
-            setDataSourceType={setDataSourceType}
-            rows={rows}
-            setRows={setRows}
-            manualRows={manualRows}
-            setManualRows={setManualRows}
-            manualColumns={manualColumns}
-            setManualColumns={setManualColumns}
-            dataMode={dataMode}
-            setDataMode={setDataMode}
-            xlsxSheets={xlsxSheets}
-            setXlsxSheets={setXlsxSheets}
-            selectedSheet={selectedSheet}
-            setSelectedSheet={setSelectedSheet}
-            selectedRowIndex={selectedRowIndex}
-            setSelectedRowIndex={setSelectedRowIndex}
-            onFileSelect={handleFileSelect}
-            onSheetChange={handleSheetChange}
-            effectiveRows={effectiveRows}
-            columns={columns}
-          />
-
-          {/* Field Mappings */}
-          <FieldMappingSection
-            fieldMappings={fieldMappings}
-            setFieldMappings={setFieldMappings}
-            columns={columns}
-          />
-
-          {/* Action Flow */}
-          <ActionFlowSection
-            actions={actions}
-            setActions={setActions}
-            fieldMappings={fieldMappings}
-            successIndicator={successIndicator}
-            setSuccessIndicator={setSuccessIndicator}
-            failureIndicator={failureIndicator}
-            setFailureIndicator={setFailureIndicator}
-          />
-
-          {/* Automation Plan Preview */}
-          <AutomationPlanPreview
-            plan={generateAutomationPlan()}
-            effectiveRows={effectiveRows}
-          />
-
-          {/* Run Button */}
-          <div className="flex justify-center">
-            <button
-              onClick={handleRun}
-              disabled={isExecuting}
-              className="px-8 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {isExecuting ? "Menjalankan..." : "Jalankan Automation Plan"}
-            </button>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+          {/* Row 1: Target Configuration & Data Source */}
+          <div className="lg:col-span-1">
+            <TargetConfiguration
+              targetUrl={targetUrl}
+              setTargetUrl={setTargetUrl}
+              requiresLogin={requiresLogin}
+              setRequiresLogin={setRequiresLogin}
+              loginUrl={loginUrl}
+              setLoginUrl={setLoginUrl}
+              loginUsername={loginUsername}
+              setLoginUsername={setLoginUsername}
+              loginPassword={loginPassword}
+              setLoginPassword={setLoginPassword}
+              navigationSteps={navigationSteps}
+              setNavigationSteps={setNavigationSteps}
+              pageReadyType={pageReadyType}
+              setPageReadyType={setPageReadyType}
+              pageReadyValue={pageReadyValue}
+              setPageReadyValue={setPageReadyValue}
+            />
           </div>
 
-          {/* Execution Report */}
-          {executionReport && <ExecutionReport report={executionReport} />}
+          <div className="lg:col-span-1">
+            <DataSourceSection
+              dataSourceType={dataSourceType}
+              setDataSourceType={setDataSourceType}
+              rows={rows}
+              setRows={setRows}
+              manualRows={manualRows}
+              setManualRows={setManualRows}
+              manualColumns={manualColumns}
+              setManualColumns={setManualColumns}
+              dataMode={dataMode}
+              setDataMode={setDataMode}
+              xlsxSheets={xlsxSheets}
+              setXlsxSheets={setXlsxSheets}
+              selectedSheet={selectedSheet}
+              setSelectedSheet={setSelectedSheet}
+              selectedRowIndex={selectedRowIndex}
+              setSelectedRowIndex={setSelectedRowIndex}
+              onFileSelect={handleFileSelect}
+              onSheetChange={handleSheetChange}
+              effectiveRows={effectiveRows}
+              columns={columns}
+            />
+          </div>
+
+          {/* Row 2: Field Mappings & Action Flow */}
+          <div className="lg:col-span-1">
+            <FieldMappingSection
+              fieldMappings={fieldMappings}
+              setFieldMappings={setFieldMappings}
+              columns={columns}
+            />
+          </div>
+
+          <div className="lg:col-span-1">
+            <ActionFlowSection
+              actions={actions}
+              setActions={setActions}
+              fieldMappings={fieldMappings}
+              successIndicator={successIndicator}
+              setSuccessIndicator={setSuccessIndicator}
+              failureIndicator={failureIndicator}
+              setFailureIndicator={setFailureIndicator}
+            />
+          </div>
+
+          {/* Row 3: Automation Plan Preview & Execution Report */}
+          <div className="lg:col-span-2">
+            <AutomationPlanPreview
+              plan={generateAutomationPlan()}
+              effectiveRows={effectiveRows}
+            />
+          </div>
+
+          {executionReport && (
+            <div className="lg:col-span-2">
+              <ExecutionReport report={executionReport} />
+            </div>
+          )}
+        </div>
+
+        {/* Run Button - Sticky */}
+        <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50">
+          <button
+            onClick={handleRun}
+            disabled={isExecuting}
+            className="px-6 py-2.5 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-xl"
+          >
+            {isExecuting ? "Menjalankan..." : "Jalankan Automation Plan"}
+          </button>
         </div>
       </div>
     </div>

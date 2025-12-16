@@ -3,11 +3,11 @@
 export default function AutomationPlanPreview({ plan, effectiveRows }) {
   if (!plan || !plan.target?.url) {
     return (
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <h2 className="text-xl font-semibold text-gray-800 mb-4">
+      <div className="bg-white rounded-lg shadow-md p-4">
+        <h2 className="text-lg font-semibold text-gray-800 mb-2">
           Pratinjau Automation Plan
         </h2>
-        <p className="text-gray-500 text-center py-8">
+        <p className="text-gray-500 text-center py-4 text-sm">
           Lengkapi konfigurasi di atas untuk melihat pratinjau Automation Plan
         </p>
       </div>
@@ -15,12 +15,12 @@ export default function AutomationPlanPreview({ plan, effectiveRows }) {
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6">
-      <h2 className="text-xl font-semibold text-gray-800 mb-4">
-        Pratinjau Automation Plan
-      </h2>
-
-      <div className="space-y-4">
+    <div className="bg-white rounded-lg shadow-md p-3">
+      <details>
+        <summary className="cursor-pointer text-base font-semibold text-gray-800 mb-2 hover:text-gray-900">
+          Pratinjau Automation Plan
+        </summary>
+        <div className="space-y-2 mt-2 max-h-[400px] overflow-y-auto">
         {/* Target */}
         <div className="border-l-4 border-blue-500 pl-4">
           <h3 className="font-semibold text-gray-700 mb-2">Target</h3>
@@ -139,15 +139,16 @@ export default function AutomationPlanPreview({ plan, effectiveRows }) {
         </div>
 
         {/* JSON Preview */}
-        <details className="mt-4">
-          <summary className="cursor-pointer text-sm font-medium text-gray-700 hover:text-gray-900">
+        <details className="mt-3">
+          <summary className="cursor-pointer text-xs font-medium text-gray-700 hover:text-gray-900">
             Tampilkan JSON Automation Plan
           </summary>
-          <pre className="mt-2 p-4 bg-gray-900 text-green-400 rounded-lg overflow-x-auto text-xs">
+          <pre className="mt-2 p-3 bg-gray-900 text-green-400 rounded-lg overflow-x-auto text-xs">
             {JSON.stringify(plan, null, 2)}
           </pre>
         </details>
       </div>
+      </details>
     </div>
   );
 }

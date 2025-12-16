@@ -42,27 +42,28 @@ export default function ActionFlowSection({
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-semibold text-gray-800">Alur Aksi</h2>
+    <div className="bg-white rounded-lg shadow-md p-3 h-full flex flex-col">
+      <div className="flex items-center justify-between mb-2">
+        <h2 className="text-base font-semibold text-gray-800">Alur Aksi</h2>
         <button
           onClick={addAction}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"
+          className="px-2 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-xs font-medium"
         >
           + Aksi
         </button>
       </div>
 
-      <p className="text-sm text-gray-600 mb-4">
-        Definisikan urutan aksi yang akan dieksekusi oleh Playwright Runner.
-        Aksi akan dijalankan secara berurutan sesuai urutan yang didefinisikan.
+      <p className="text-xs text-gray-600 mb-2">
+        Definisikan urutan aksi yang akan dieksekusi SETELAH sampai di halaman target.
+        Aksi akan dijalankan secara berurutan. Untuk mode batch, alur ini akan di-loop untuk setiap baris data.
+        Contoh: Klik tombol "Tambah Data" → Isi form → Handle popup → Kembali ke halaman awal.
       </p>
 
-      <div className="space-y-4">
+      <div className="space-y-2 flex-1 overflow-y-auto max-h-[calc(100vh-200px)]">
         {actions.map((action, idx) => (
           <div
             key={idx}
-            className="border border-gray-200 rounded-lg p-4 space-y-3"
+            className="border border-gray-200 rounded-lg p-3 space-y-2"
           >
             <div className="flex items-start justify-between">
               <div className="flex-1 space-y-3">
@@ -74,12 +75,13 @@ export default function ActionFlowSection({
                   <select
                     value={action.type}
                     onChange={(e) => updateAction(idx, "type", e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     <option value="fill">Isi Field</option>
                     <option value="click">Klik Tombol/Elemen</option>
                     <option value="wait">Tunggu</option>
                     <option value="handleDialog">Tangani Dialog</option>
+                    <option value="navigate">Navigasi/Kembali ke Halaman</option>
                   </select>
                 </div>
 
@@ -93,7 +95,7 @@ export default function ActionFlowSection({
                       <select
                         value={action.target}
                         onChange={(e) => updateAction(idx, "target", e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       >
                         <option value="">Pilih Field</option>
                         {getActionTargetOptions(action.type).map((opt) => (
@@ -102,6 +104,14 @@ export default function ActionFlowSection({
                           </option>
                         ))}
                       </select>
+                    ) : action.type === "navigate" ? (
+                      <input
+                        type="text"
+                        value={action.target}
+                        onChange={(e) => updateAction(idx, "target", e.target.value)}
+                        placeholder="URL atau kosongkan untuk kembali ke halaman target awal"
+                        className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
                     ) : (
                       <input
                         type="text"
@@ -109,10 +119,10 @@ export default function ActionFlowSection({
                         onChange={(e) => updateAction(idx, "target", e.target.value)}
                         placeholder={
                           action.type === "click"
-                            ? "Label atau selector tombol/elemen"
+                            ? "Label atau selector tombol/elemen (contoh: Tambah Data)"
                             : "Selector dialog"
                         }
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       />
                     )}
                   </div>
@@ -131,7 +141,7 @@ export default function ActionFlowSection({
                         updateAction(idx, "value", e.target.value || null)
                       }
                       placeholder="Kosongkan untuk menggunakan nilai dari data source"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                   </div>
                 )}
@@ -149,7 +159,7 @@ export default function ActionFlowSection({
                         updateAction(idx, "value", Number(e.target.value))
                       }
                       min="1"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                   </div>
                 )}
@@ -170,7 +180,7 @@ export default function ActionFlowSection({
                             value: action.waitFor?.value || "",
                           })
                         }
-                        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       >
                         <option value="selector">CSS Selector</option>
                         <option value="text">Teks</option>
@@ -196,7 +206,7 @@ export default function ActionFlowSection({
 
               <button
                 onClick={() => removeAction(idx)}
-                className="ml-4 px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg"
+                className="ml-4 px-2 py-1.5 text-xs text-red-600 hover:bg-red-50 rounded-lg"
               >
                 Hapus
               </button>
@@ -212,8 +222,8 @@ export default function ActionFlowSection({
       </div>
 
       {/* Success & Failure Indicators */}
-      <div className="mt-6 pt-6 border-t border-gray-200 space-y-4">
-        <h3 className="text-lg font-semibold text-gray-800">
+      <div className="mt-4 pt-4 border-t border-gray-200 space-y-3">
+        <h3 className="text-base font-semibold text-gray-800">
           Indikator Hasil Eksekusi
         </h3>
 
@@ -231,7 +241,7 @@ export default function ActionFlowSection({
                   type: e.target.value,
                 })
               }
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="selector">CSS Selector</option>
               <option value="text">Teks</option>
@@ -266,7 +276,7 @@ export default function ActionFlowSection({
                   type: e.target.value,
                 })
               }
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="selector">CSS Selector</option>
               <option value="text">Teks</option>

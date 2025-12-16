@@ -77,29 +77,29 @@ export default function FieldMappingSection({
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-semibold text-gray-800">
+    <div className="bg-white rounded-lg shadow-md p-3 h-full flex flex-col">
+      <div className="flex items-center justify-between mb-2">
+        <h2 className="text-base font-semibold text-gray-800">
           Pemetaan Field Form
         </h2>
         <button
           onClick={addFieldMapping}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"
+          className="px-2 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-xs font-medium"
         >
           + Field
         </button>
       </div>
 
-      <p className="text-sm text-gray-600 mb-4">
+      <p className="text-xs text-gray-600 mb-2">
         Definisikan field form berdasarkan maksud bisnis, bukan selector DOM.
         Playwright akan mencari elemen berdasarkan label yang didefinisikan.
       </p>
 
-      <div className="space-y-4">
+      <div className="space-y-2 flex-1 overflow-y-auto max-h-[calc(100vh-200px)]">
         {fieldMappings.map((fm, idx) => (
           <div
             key={idx}
-            className="border border-gray-200 rounded-lg p-4 space-y-3"
+            className="border border-gray-200 rounded-lg p-3 space-y-2"
           >
             <div className="flex items-start justify-between">
               <div className="flex-1 space-y-3">
@@ -113,7 +113,7 @@ export default function FieldMappingSection({
                     value={fm.name}
                     onChange={(e) => updateFieldMapping(idx, "name", e.target.value)}
                     placeholder="contoh: Nama Lengkap, Email, Status"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
 
@@ -126,7 +126,7 @@ export default function FieldMappingSection({
                     <select
                       value={fm.type}
                       onChange={(e) => updateFieldMapping(idx, "type", e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     >
                       <option value="text">Text</option>
                       <option value="select">Select/Dropdown</option>
@@ -142,7 +142,7 @@ export default function FieldMappingSection({
                     <select
                       value={fm.dataKey}
                       onChange={(e) => updateFieldMapping(idx, "dataKey", e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     >
                       {columns.map((col) => (
                         <option key={col} value={col}>
@@ -183,12 +183,12 @@ export default function FieldMappingSection({
                             updateLabel(idx, labelIdx, e.target.value)
                           }
                           placeholder="Label yang akan dicari di halaman"
-                          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          className="flex-1 px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         />
                         {fm.labels.length > 1 && (
                           <button
                             onClick={() => removeLabel(idx, labelIdx)}
-                            className="px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg"
+                            className="px-2 py-1.5 text-xs text-red-600 hover:bg-red-50 rounded-lg"
                           >
                             Hapus
                           </button>
@@ -197,7 +197,7 @@ export default function FieldMappingSection({
                     ))}
                     <button
                       onClick={() => addLabel(idx)}
-                      className="text-sm text-blue-600 hover:text-blue-800"
+                      className="text-xs text-blue-600 hover:text-blue-800"
                     >
                       + Tambah Label Alternatif
                     </button>
@@ -219,11 +219,11 @@ export default function FieldMappingSection({
                             updateFallbackLabel(idx, labelIdx, e.target.value)
                           }
                           placeholder="Label cadangan jika label utama tidak ditemukan"
-                          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          className="flex-1 px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         />
                         <button
                           onClick={() => removeFallbackLabel(idx, labelIdx)}
-                          className="px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg"
+                          className="px-2 py-1.5 text-xs text-red-600 hover:bg-red-50 rounded-lg"
                         >
                           Hapus
                         </button>
@@ -231,7 +231,7 @@ export default function FieldMappingSection({
                     ))}
                     <button
                       onClick={() => addFallbackLabel(idx)}
-                      className="text-sm text-blue-600 hover:text-blue-800"
+                      className="text-xs text-blue-600 hover:text-blue-800"
                     >
                       + Tambah Label Cadangan
                     </button>
@@ -255,7 +255,7 @@ export default function FieldMappingSection({
                         });
                       }
                     }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     <option value="">Tidak Ada Kondisi</option>
                     <option value="dataExists">Hanya Isi Jika Data Tersedia</option>
@@ -276,7 +276,7 @@ export default function FieldMappingSection({
                           ? "Selector elemen yang harus ada"
                           : "Nilai yang harus ada"
                       }
-                      className="w-full mt-2 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full mt-2 px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                   )}
                 </div>
@@ -284,7 +284,7 @@ export default function FieldMappingSection({
 
               <button
                 onClick={() => removeFieldMapping(idx)}
-                className="ml-4 px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg"
+                className="ml-4 px-2 py-1.5 text-xs text-red-600 hover:bg-red-50 rounded-lg"
               >
                 Hapus
               </button>
