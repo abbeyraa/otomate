@@ -4,13 +4,13 @@ __pycache__/
 *$py.class
 *.so
 .Python
+backend/lib/
 build/
 develop-eggs/
 dist/
 downloads/
 eggs/
 .eggs/
-lib/
 lib64/
 parts/
 sdist/
@@ -35,7 +35,7 @@ frontend/.turbo/
 frontend/node_modules/
 frontend/.swc/
 
-# Node
+# Node.js
 node_modules/
 npm-debug.log*
 yarn-debug.log*
@@ -56,24 +56,23 @@ lerna-debug.log*
 .env.production.local
 .env*.local
 
-# IDE
+# IDE / Editor
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
-.DS_Store
 *.sublime-project
 *.sublime-workspace
 
-# OS
-Thumbs.db
+# MacOS / OS Misc
 .DS_Store
 .DS_Store?
 ._*
 .Spotlight-V100
 .Trashes
 ehthumbs.db
+Thumbs.db
 Desktop.ini
 
 # Logs
@@ -90,16 +89,15 @@ backend/uploads/
 *.backup
 
 # Testing
+.cache
 .coverage
+.cover
 .pytest_cache/
 .tox/
 htmlcov/
 .hypothesis/
-*.cover
-.cache
 nosetests.xml
 coverage.xml
-*.cover
 
 # Database
 *.db
@@ -111,7 +109,7 @@ test-results/
 playwright-report/
 playwright/.cache/
 
-# Misc
+# Miscellaneous
 *.pid
 *.seed
 *.pid.lock

@@ -1,0 +1,15 @@
+{
+  "openButton": {
+    "selector": "Tambah Data",
+    "text": "Tambah Data"
+  },
+  "mappings": [
+    {
+      "variable": "field1",
+      "selector": "[name=\"kode_jenis\"]"
+    }
+  ],
+  "data": {
+    "field1": "3"
+  }
+}
