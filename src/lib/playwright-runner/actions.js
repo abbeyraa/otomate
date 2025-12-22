@@ -6,17 +6,23 @@ import { waitForPageReady } from "./indicators";
 import { installDialogAutoAcceptIfNeeded } from "./dialog";
 
 /**
- * Execute a single action
- * @param {Page} page - Playwright page object
- * @param {Object} action - Action configuration
- * @param {Object} plan - Automation plan
- * @param {Object} rowData - Row data untuk fill action
- * @returns {Promise<Object>} Action result
+ * Executes a single automation action based on its type.
+ * Supports fill, click, wait, handleDialog, and navigate action types.
+ *
+ * @param {Page} page - Playwright page object.
+ * @param {Object} action - Action configuration object.
+ * @param {string} action.type - Type of action to execute.
+ * @param {string} action.target - Target element or URL for the action.
+ * @param {*} action.value - Optional value for fill/wait actions.
+ * @param {Object} plan - Complete automation plan configuration.
+ * @param {Object} rowData - Row data for fill actions (field mapping).
+ * @returns {Promise<Object>} Action execution result with success status.
  */
 export async function executeAction(page, action, plan, rowData) {
   try {
     switch (action.type) {
       case "fill": {
+        // === Find field mapping configuration ===
         const fieldMapping = plan.fieldMappings.find(
           (fm) => fm.name === action.target
         );
@@ -24,13 +30,13 @@ export async function executeAction(page, action, plan, rowData) {
           throw new Error(`Field mapping not found: ${action.target}`);
         }
 
-        // Ambil nilai dari data atau value action
+        // === Extract value from action or row data ===
         const value =
           action.value !== undefined && action.value !== null
             ? action.value
             : rowData[fieldMapping.dataKey] || "";
 
-        // Cari elemen berdasarkan label
+        // === Locate element using label-based search ===
         const element = await findElementByLabel(
           page,
           fieldMapping.labels,
@@ -46,7 +52,7 @@ export async function executeAction(page, action, plan, rowData) {
           );
         }
 
-        // Isi berdasarkan tipe
+        // === Fill element based on field type ===
         if (fieldMapping.type === "checkbox" || fieldMapping.type === "radio") {
           if (value) {
             await element.check();
@@ -56,7 +62,7 @@ export async function executeAction(page, action, plan, rowData) {
         } else if (fieldMapping.type === "select") {
           await element.selectOption(value);
         } else {
-          // Gunakan human typing untuk input text/textarea
+          // === Use human typing for text/textarea inputs ===
           await humanType(element, String(value));
         }
 
@@ -64,28 +70,33 @@ export async function executeAction(page, action, plan, rowData) {
       }
 
       case "click": {
+        // === Execute click action on target element ===
         await clickByTextOrSelector(page, action.target);
         return { type: action.type, target: action.target, success: true };
       }
 
       case "wait": {
+        // === Execute wait action with specified duration ===
         const duration = action.value || 1;
         await page.waitForTimeout(duration * 1000);
         return { type: action.type, success: true };
       }
 
       case "handleDialog": {
-        // Backward-compatible: action ini mengaktifkan auto-accept dialog.
-        // Namun handler idealnya sudah dipasang dari awal sebelum click terjadi.
+        // === Install dialog auto-accept handler ===
+        // Note: Backward-compatible action. Handler should ideally be installed
+        // at the start before any clicks occur, but this allows explicit activation.
         installDialogAutoAcceptIfNeeded(page, plan, true);
         return { type: action.type, success: true };
       }
 
       case "navigate": {
+        // === Execute navigation action ===
         if (action.target) {
+          // === Navigate to specified URL ===
           await page.goto(action.target, { waitUntil: "networkidle" });
         } else {
-          // Kembali ke halaman target awal
+          // === Navigate back to initial target URL ===
           await page.goto(plan.target.url, { waitUntil: "networkidle" });
           await waitForPageReady(page, plan.target.pageReadyIndicator);
         }
@@ -100,6 +111,7 @@ export async function executeAction(page, action, plan, rowData) {
         throw new Error(`Unknown action type: ${action.type}`);
     }
   } catch (error) {
+    // === Return error result if action execution fails ===
     return {
       type: action.type,
       target: action.target,
@@ -110,44 +122,53 @@ export async function executeAction(page, action, plan, rowData) {
 }
 
 /**
- * Execute actions for a single row of data
- * @param {Page} page - Playwright page object
- * @param {Object} plan - Automation plan
- * @param {Object} rowData - Row data
- * @param {number} rowIndex - Row index
- * @param {string} targetUrl - Target URL
- * @returns {Promise<Object>} Execution result
+ * Executes all actions in the automation plan for a single row of data.
+ * Ensures the page is on the target URL before execution and evaluates
+ * success/failure indicators after completion.
+ *
+ * @param {Page} page - Playwright page object.
+ * @param {Object} plan - Complete automation plan configuration.
+ * @param {Object} rowData - Data row to use for fill actions.
+ * @param {number} rowIndex - Index of the current row being processed.
+ * @param {string} targetUrl - Target URL to ensure we're on the correct page.
+ * @returns {Promise<Object>} Execution result with status, actions, and metadata.
  */
-export async function executeActionsForRow(page, plan, rowData, rowIndex, targetUrl) {
+export async function executeActionsForRow(
+  page,
+  plan,
+  rowData,
+  rowIndex,
+  targetUrl
+) {
   const actionResults = [];
   const startTime = Date.now();
   const warnings = [];
 
   try {
-    // Pastikan kita di halaman target
+    // === Ensure we're on the target page ===
     const currentUrl = page.url();
     if (!currentUrl.includes(new URL(targetUrl).pathname)) {
       await page.goto(targetUrl, { waitUntil: "networkidle" });
       await waitForPageReady(page, plan.target.pageReadyIndicator);
     }
 
-    // Eksekusi setiap action
+    // === Execute each action in sequence ===
     for (const action of plan.actions) {
       const actionResult = await executeAction(page, action, plan, rowData);
       actionResults.push(actionResult);
 
-      // Jika action gagal, bisa stop atau continue
+      // === Stop execution if required action fails ===
       if (!actionResult.success && action.required !== false) {
         throw new Error(`Action failed: ${action.type} -> ${action.target}`);
       }
 
-      // Wait for jika ada
+      // === Wait for indicator if specified ===
       if (action.waitFor) {
         await waitForIndicator(page, action.waitFor);
       }
     }
 
-    // Check success indicator
+    // === Evaluate success and failure indicators ===
     const success =
       plan.successIndicator?.type && plan.successIndicator?.value
         ? await checkIndicator(page, plan.successIndicator)
@@ -157,6 +178,7 @@ export async function executeActionsForRow(page, plan, rowData, rowIndex, target
         ? await checkIndicator(page, plan.failureIndicator)
         : false;
 
+    // === Determine final execution status ===
     const status = failure
       ? "failed"
       : success === true
@@ -174,6 +196,7 @@ export async function executeActionsForRow(page, plan, rowData, rowIndex, target
       duration: Date.now() - startTime,
     };
   } catch (error) {
+    // === Return failed result with error details ===
     return {
       rowIndex,
       status: "failed",
@@ -187,20 +210,25 @@ export async function executeActionsForRow(page, plan, rowData, rowIndex, target
 }
 
 /**
- * Execute actions with loop mode
- * @param {Page} page - Playwright page object
- * @param {Object} plan - Automation plan
- * @param {Object} rowData - Row data
- * @param {string} targetUrl - Target URL
- * @returns {Promise<Array>} Array of execution results
+ * Executes actions in loop mode until a stop condition is met.
+ * Continues iterating until the indicator condition is satisfied or max iterations reached.
+ *
+ * @param {Page} page - Playwright page object.
+ * @param {Object} plan - Complete automation plan configuration.
+ * @param {Object} rowData - Data row to use for fill actions.
+ * @param {string} targetUrl - Target URL to ensure we're on the correct page.
+ * @returns {Promise<Array>} Array of execution results for each iteration.
+ * @throws {Error} If loop indicator configuration is missing.
  */
 export async function executeActionsWithLoop(page, plan, rowData, targetUrl) {
+  // === Extract loop configuration with defaults ===
   const loop = plan.execution?.loop || {};
   const maxIterations = Number(loop.maxIterations ?? 50);
   const delaySeconds = Number(loop.delaySeconds ?? 0);
   const stopWhen = loop.stopWhen === "visible" ? "visible" : "notVisible";
   const indicator = loop.indicator;
 
+  // === Validate loop indicator configuration ===
   if (!indicator?.type || !indicator?.value) {
     throw new Error(
       "Mode loop membutuhkan execution.loop.indicator (type & value)."
@@ -209,7 +237,9 @@ export async function executeActionsWithLoop(page, plan, rowData, targetUrl) {
 
   const iterations = [];
 
+  // === Execute loop until stop condition or max iterations ===
   for (let i = 0; i < maxIterations; i++) {
+    // === Check indicator state to determine if loop should stop ===
     const indicatorState = await checkIndicator(page, indicator);
     const shouldStop =
       stopWhen === "visible"
@@ -217,6 +247,7 @@ export async function executeActionsWithLoop(page, plan, rowData, targetUrl) {
         : indicatorState === false;
 
     if (shouldStop) {
+      // === Handle case where stop condition is met before first iteration ===
       if (i === 0) {
         iterations.push({
           rowIndex: 0,
@@ -232,6 +263,7 @@ export async function executeActionsWithLoop(page, plan, rowData, targetUrl) {
       break;
     }
 
+    // === Execute actions for current iteration ===
     const result = await executeActionsForRow(
       page,
       plan,
@@ -241,12 +273,13 @@ export async function executeActionsWithLoop(page, plan, rowData, targetUrl) {
     );
     iterations.push(result);
 
-    // Jika ada failure indicator dan terdeteksi, stop segera
+    // === Check for failure indicator and abort if detected ===
     if (plan.failureIndicator) {
       const failureDetected = await checkIndicator(page, plan.failureIndicator);
       if (failureDetected) break;
     }
 
+    // === Apply delay between iterations if configured ===
     if (delaySeconds > 0) {
       await page.waitForTimeout(delaySeconds * 1000);
     }

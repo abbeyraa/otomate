@@ -1,5 +1,9 @@
-// Main entry point untuk Playwright runner
-// Catatan: File ini harus dijalankan di server-side (Node.js), tidak bisa di browser
+/**
+ * Main entry point for the Playwright automation runner.
+ *
+ * Note: This file is intended to be executed server-side (Node.js only).
+ * It cannot run in the browser environment.
+ */
 
 import { loadPlaywright } from "./loader";
 import { normalizePlan } from "./normalize";
@@ -10,9 +14,10 @@ import { waitForPageReady, checkIndicator } from "./indicators";
 import { installDialogAutoAcceptIfNeeded } from "./dialog";
 
 /**
- * Eksekusi Automation Plan menggunakan Playwright
- * @param {Object} plan - Automation plan dari UI
- * @returns {Promise<Object>} Execution report
+ * Executes the automation plan using Playwright.
+ *
+ * @param {Object} plan - The automation plan as defined from the UI.
+ * @returns {Promise<Object>} - Detailed execution report.
  */
 export async function executeAutomationPlan(plan) {
   const { chromium } = await loadPlaywright();
@@ -25,16 +30,16 @@ export async function executeAutomationPlan(plan) {
   const startTime = Date.now();
 
   try {
-    // Jika flow mengandung handleDialog, pasang handler dari awal agar dialog
-    // yang muncul saat click tidak membuat aksi terlihat "tidak jalan".
+    // === Install dialog handler if "handleDialog" steps are present ===
+    // Ensures modal dialogs encountered during automation are properly handled from the very beginning.
     installDialogAutoAcceptIfNeeded(page, normalizedPlan);
 
-    // Step 1: Login jika diperlukan
+    // === STEP 1: Perform login if a login step is configured ===
     if (normalizedPlan.target.login) {
       await performLogin(page, normalizedPlan.target.login);
     }
 
-    // Step 2: Navigation ke halaman target
+    // === STEP 2: Perform navigation steps if configured ===
     if (
       normalizedPlan.target.navigation &&
       normalizedPlan.target.navigation.length > 0
@@ -42,13 +47,13 @@ export async function executeAutomationPlan(plan) {
       await performNavigation(page, normalizedPlan.target.navigation);
     }
 
-    // Step 3: Navigate ke target URL dan tunggu page ready
+    // === STEP 3: Navigate to the main target URL and await page readiness ===
     await page.goto(normalizedPlan.target.url, { waitUntil: "networkidle" });
     await waitForPageReady(page, normalizedPlan.target.pageReadyIndicator);
 
-    // Step 4: Eksekusi berdasarkan mode
+    // === STEP 4: Execute actions according to execution mode (batch or single) ===
     if (normalizedPlan.dataSource.mode === "batch") {
-      // Batch mode: loop untuk setiap baris data
+      // === Batch Mode: Execute actions for each row in dataSource ===
       for (let i = 0; i < normalizedPlan.dataSource.rows.length; i++) {
         const rowData = normalizedPlan.dataSource.rows[i];
         const result = await executeActionsForRow(
@@ -60,19 +65,19 @@ export async function executeAutomationPlan(plan) {
         );
         results.push(result);
 
-        // Jika gagal dan ada failure indicator, stop atau continue sesuai kebutuhan
+        // === Abort logic: Check for failure indicator if action failed ===
         if (result.status === "failed" && normalizedPlan.failureIndicator) {
           const failureDetected = await checkIndicator(
             page,
             normalizedPlan.failureIndicator
           );
           if (failureDetected) {
-            break; // Stop jika failure indicator terdeteksi
+            break; // Abort batch if failure indicator is detected
           }
         }
       }
     } else {
-      // Single mode: hanya eksekusi untuk satu baris
+      // === Single Mode: Execute actions for a selected data row (supports loop if configured) ===
       const rowIndex =
         normalizedPlan.dataSource.selectedRowIndex !== undefined
           ? normalizedPlan.dataSource.selectedRowIndex
@@ -80,6 +85,7 @@ export async function executeAutomationPlan(plan) {
       const rowData = normalizedPlan.dataSource.rows[rowIndex] || {};
 
       if (normalizedPlan.execution?.mode === "loop") {
+        // === Loop Mode: Execute actions in a loop until exit condition met ===
         const loopResults = await executeActionsWithLoop(
           page,
           normalizedPlan,
@@ -88,6 +94,7 @@ export async function executeAutomationPlan(plan) {
         );
         results.push(...loopResults);
       } else {
+        // === Default Single Run ===
         const result = await executeActionsForRow(
           page,
           normalizedPlan,
@@ -99,7 +106,7 @@ export async function executeAutomationPlan(plan) {
       }
     }
 
-    // Step 5: Generate summary
+    // === STEP 5: Compile summary statistics ===
     const summary = {
       total: results.length,
       success: results.filter((r) => r.status === "success").length,
@@ -121,6 +128,7 @@ export async function executeAutomationPlan(plan) {
       duration,
     };
   } catch (error) {
+    // === Error handling: Return error status and message in report ===
     return {
       status: "error",
       message: error.message,
@@ -128,6 +136,7 @@ export async function executeAutomationPlan(plan) {
       duration: Date.now() - startTime,
     };
   } finally {
+    // === Ensure browser resources are freed after execution ===
     await browser.close();
   }
 }

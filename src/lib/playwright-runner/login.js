@@ -1,14 +1,21 @@
 import { humanType } from "./humanType";
 
 /**
- * Perform login
- * @param {Page} page - Playwright page object
- * @param {Object} loginConfig - Login configuration
+ * Performs user login by navigating to the login page, filling credentials,
+ * and submitting the login form.
+ *
+ * @param {Page} page - Playwright page object.
+ * @param {Object} loginConfig - Login configuration object.
+ * @param {string} loginConfig.url - The login page URL.
+ * @param {string} loginConfig.username - Username to login with.
+ * @param {string} loginConfig.password - Password to login with.
+ * @throws {Error} If username field, password field, or submit button cannot be found.
  */
 export async function performLogin(page, loginConfig) {
+  // === Navigate to login page ===
   await page.goto(loginConfig.url, { waitUntil: "networkidle" });
 
-  // Cari field username dan password berdasarkan label atau selector umum
+  // === Define common username field selectors ===
   const usernameSelectors = [
     'input[name="username"]',
     'input[name="email"]',
@@ -18,13 +25,14 @@ export async function performLogin(page, loginConfig) {
     "input#email",
   ];
 
+  // === Define common password field selectors ===
   const passwordSelectors = [
     'input[name="password"]',
     'input[type="password"]',
     "input#password",
   ];
 
-  // Coba isi username
+  // === Attempt to fill username field using multiple selector strategies ===
   let usernameFilled = false;
   for (const selector of usernameSelectors) {
     try {
@@ -43,7 +51,7 @@ export async function performLogin(page, loginConfig) {
     throw new Error("Username field not found");
   }
 
-  // Coba isi password
+  // === Attempt to fill password field using multiple selector strategies ===
   let passwordFilled = false;
   for (const selector of passwordSelectors) {
     try {
@@ -62,7 +70,7 @@ export async function performLogin(page, loginConfig) {
     throw new Error("Password field not found");
   }
 
-  // Cari dan klik tombol submit/login
+  // === Define common submit button selectors ===
   const submitSelectors = [
     'button[type="submit"]',
     'input[type="submit"]',
@@ -71,6 +79,7 @@ export async function performLogin(page, loginConfig) {
     'button:has-text("Masuk")',
   ];
 
+  // === Attempt to click submit button using multiple selector strategies ===
   let submitted = false;
   for (const selector of submitSelectors) {
     try {
@@ -89,6 +98,6 @@ export async function performLogin(page, loginConfig) {
     throw new Error("Submit button not found");
   }
 
-  // Tunggu navigasi setelah login
+  // === Wait for navigation after login submission ===
   await page.waitForURL("**", { timeout: 10000 });
 }

@@ -1,13 +1,18 @@
 /**
- * Normalize automation plan untuk memastikan struktur data valid
- * @param {Object} plan - Automation plan dari UI
- * @returns {Object} Normalized plan
+ * Normalizes an automation plan to ensure valid data structure.
+ * Validates required fields and provides safe defaults for optional fields.
+ *
+ * @param {Object} plan - The automation plan object from the UI.
+ * @returns {Object} A normalized and validated automation plan.
+ * @throws {Error} If the plan is invalid or missing required fields.
  */
 export function normalizePlan(plan) {
+  // === Validate plan object structure ===
   if (!plan || typeof plan !== "object") {
     throw new Error("Automation plan tidak valid");
   }
 
+  // === Normalize and validate target configuration ===
   const target = plan.target || {};
   if (!target.url) {
     throw new Error("Target URL tidak ditemukan di plan");
@@ -16,6 +21,7 @@ export function normalizePlan(plan) {
     throw new Error("Page Ready Indicator tidak valid di plan");
   }
 
+  // === Normalize data source configuration with safe defaults ===
   const dataSource =
     plan.dataSource && typeof plan.dataSource === "object"
       ? plan.dataSource
@@ -36,6 +42,7 @@ export function normalizePlan(plan) {
       : {}),
   };
 
+  // === Return normalized plan with validated arrays ===
   return {
     ...plan,
     target,

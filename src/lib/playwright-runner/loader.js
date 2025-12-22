@@ -1,16 +1,24 @@
-// Load Playwright library
-// Catatan: File ini harus dijalankan di server-side (Node.js), tidak bisa di browser
+/**
+ * Playwright Library Loader Module
+ *
+ * Note: This module must be executed server-side (Node.js only).
+ * It cannot run in the browser environment.
+ */
 
 let playwrightLoaded = false;
 let playwright = null;
 
 /**
- * Load Playwright library (lazy loading)
- * @returns {Promise<Object>} Playwright module
+ * Loads the Playwright library using lazy loading pattern.
+ * Ensures the library is only loaded once and cached for subsequent calls.
+ *
+ * @returns {Promise<Object>} The Playwright module object.
+ * @throws {Error} If Playwright is not available or installation is missing.
  */
 export async function loadPlaywright() {
   if (!playwrightLoaded) {
     try {
+      // === Lazy load Playwright module ===
       playwright = await import("playwright");
       playwrightLoaded = true;
     } catch (error) {

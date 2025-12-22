@@ -1,32 +1,36 @@
 import { escapeForCssString, escapeForRegex } from "./utils";
 
 /**
- * Get clickable locator untuk element berdasarkan text atau selector
- * @param {Page} page - Playwright page object
- * @param {string} target - Text atau selector
- * @returns {Promise<Locator|null>} Element locator or null
+ * Gets a clickable element locator based on text content or CSS selector.
+ * Uses multiple search strategies in order of specificity to find the element.
+ *
+ * @param {Page} page - Playwright page object.
+ * @param {string} target - Text content or CSS selector to find.
+ * @returns {Promise<Locator|null>} Element locator if found and valid, null otherwise.
  */
 export async function getClickableLocator(page, target) {
   if (!target) return null;
   const t = String(target).trim();
   if (!t) return null;
+  
+  // === Prepare regex patterns for text matching ===
   const exactTextRe = new RegExp(`^\\s*${escapeForRegex(t)}\\s*$`, "i");
   const containsTextRe = new RegExp(escapeForRegex(t), "i");
 
-  // Helper untuk validasi elemen
+  // === Helper function to validate element is clickable ===
   const validateElement = async (locator) => {
     try {
-      // Pastikan elemen visible dan enabled
+      // === Ensure element is visible ===
       const isVisible = await locator.isVisible({ timeout: 2000 });
       if (!isVisible) return false;
 
-      // Cek apakah elemen enabled (tidak disabled)
+      // === Check if element is enabled (not disabled) ===
       const isEnabled = await locator
         .isEnabled({ timeout: 1000 })
         .catch(() => true);
       if (!isEnabled) return false;
 
-      // Coba trial click untuk memastikan bisa diklik
+      // === Perform trial click to verify element is clickable ===
       await locator.click({ timeout: 3000, trial: true });
       return true;
     } catch (e) {
@@ -34,27 +38,27 @@ export async function getClickableLocator(page, target) {
     }
   };
 
-  // 1) Coba sebagai selector CSS (trial click)
+  // === Strategy 1: Try as CSS selector first ===
   try {
     const css = page.locator(t).first();
     if (await validateElement(css)) {
       return css;
     }
   } catch (e) {
-    // lanjut
+    // Continue to next strategy
   }
 
-  // 2) Role-based EXACT (paling akurat untuk button/link)
+  // === Strategy 2: Role-based EXACT match (most accurate for buttons/links) ===
   try {
     const btnExact = page.getByRole("button", { name: t, exact: true }).first();
     if (await validateElement(btnExact)) {
       return btnExact;
     }
   } catch (e) {
-    // lanjut
+    // Continue to next strategy
   }
 
-  // 2b) Role-based regex EXACT (tahan whitespace/icon, tapi tetap EXACT)
+  // === Strategy 2b: Role-based regex EXACT (handles whitespace/icons, still exact) ===
   try {
     const btnRegex = page
       .getByRole("button", {
@@ -65,10 +69,10 @@ export async function getClickableLocator(page, target) {
       return btnRegex;
     }
   } catch (e) {
-    // lanjut
+    // Continue to next strategy
   }
 
-  // 2c) Filter berbasis textContent yang EXACT (untuk button submit dengan icon)
+  // === Strategy 2c: Filter by textContent EXACT (for submit buttons with icons) ===
   try {
     const btnByTextExact = page
       .locator("button")
@@ -78,15 +82,15 @@ export async function getClickableLocator(page, target) {
       return btnByTextExact;
     }
   } catch (e) {
-    // lanjut
+    // Continue to next strategy
   }
 
-  // 2d) Role-based dengan contains (untuk kasus ada whitespace/icon tambahan)
+  // === Strategy 2d: Role-based with contains (for cases with extra whitespace/icons) ===
   try {
     const btnContains = page
       .getByRole("button", { name: containsTextRe })
       .first();
-    // Untuk contains, pastikan text content exact match untuk menghindari false positive
+    // === For contains, verify text content exact match to avoid false positives ===
     const textContent = await btnContains.textContent({ timeout: 2000 });
     if (textContent && exactTextRe.test(textContent.trim())) {
       if (await validateElement(btnContains)) {
@@ -94,10 +98,10 @@ export async function getClickableLocator(page, target) {
       }
     }
   } catch (e) {
-    // lanjut
+    // Continue to next strategy
   }
 
-  // 2e) Button dengan filter contains text yang kemudian di-validate exact
+  // === Strategy 2e: Button with contains text filter, then validate exact ===
   try {
     const btnByContains = page
       .locator("button")
@@ -110,10 +114,10 @@ export async function getClickableLocator(page, target) {
       }
     }
   } catch (e) {
-    // lanjut
+    // Continue to next strategy
   }
 
-  // 2f) Fallback: Role-based tanpa exact (jika exact tidak ketemu)
+  // === Strategy 2f: Fallback - Role-based without exact (if exact not found) ===
   try {
     const btn = page.getByRole("button", { name: t }).first();
     const textContent = await btn.textContent({ timeout: 2000 });
@@ -123,30 +127,30 @@ export async function getClickableLocator(page, target) {
       }
     }
   } catch (e) {
-    // lanjut
+    // Continue to next strategy
   }
 
-  // 2g) Button dengan title attribute (untuk tombol icon seperti Delete)
+  // === Strategy 2g: Button with title attribute (for icon buttons like Delete) ===
   try {
     const btnByTitle = page.locator(`button[title="${t}" i]`).first();
     if (await validateElement(btnByTitle)) {
       return btnByTitle;
     }
   } catch (e) {
-    // lanjut
+    // Continue to next strategy
   }
 
-  // 2h) Button dengan aria-label
+  // === Strategy 2h: Button with aria-label ===
   try {
     const btnByAriaLabel = page.locator(`button[aria-label="${t}" i]`).first();
     if (await validateElement(btnByAriaLabel)) {
       return btnByAriaLabel;
     }
   } catch (e) {
-    // lanjut
+    // Continue to next strategy
   }
 
-  // 2i) Button dengan title yang contains (case-insensitive)
+  // === Strategy 2i: Button with title that contains (case-insensitive) ===
   try {
     const btnByTitleContains = page
       .locator("button")
@@ -156,10 +160,10 @@ export async function getClickableLocator(page, target) {
       return btnByTitleContains;
     }
   } catch (e) {
-    // lanjut
+    // Continue to next strategy
   }
 
-  // 2j) Button dengan aria-label yang contains
+  // === Strategy 2j: Button with aria-label that contains ===
   try {
     const btnByAriaLabelContains = page
       .locator("button")
@@ -169,22 +173,22 @@ export async function getClickableLocator(page, target) {
       return btnByAriaLabelContains;
     }
   } catch (e) {
-    // lanjut
+    // Continue to next strategy
   }
 
-  // 2k) Button dengan onclick yang contains text (untuk kasus deleteTransaction('ID'))
+  // === Strategy 2k: Button with onclick containing text (for cases like deleteTransaction('ID')) ===
   try {
     const btnByOnclick = page.locator(`button[onclick*="${t}" i]`).first();
     if (await validateElement(btnByOnclick)) {
       return btnByOnclick;
     }
   } catch (e) {
-    // lanjut
+    // Continue to next strategy
   }
 
-  // 2l) Button dengan icon yang memiliki title/aria-label di parent
+  // === Strategy 2l: Button with icon that has title/aria-label in parent ===
   try {
-    // Cari icon dengan class yang umum (bi-trash, bi-pencil, dll) lalu cari parent button
+    // === Search for icons with common classes, then find parent button ===
     const iconSelectors = [
       `i.bi-trash`,
       `i.bi-pencil`,
@@ -200,7 +204,7 @@ export async function getClickableLocator(page, target) {
       try {
         const icon = page.locator(iconSel).first();
         if (await icon.isVisible({ timeout: 1000 })) {
-          // Cek apakah parent button memiliki title/aria-label yang match
+          // === Check if parent button has matching title/aria-label ===
           const parentButton = icon.locator(
             "xpath=ancestor-or-self::button[1]"
           );
@@ -225,10 +229,10 @@ export async function getClickableLocator(page, target) {
       }
     }
   } catch (e) {
-    // lanjut
+    // Continue to next strategy
   }
 
-  // 2m) XPath untuk button dengan title attribute
+  // === Strategy 2m: XPath for button with title attribute ===
   try {
     const xpathTitle = page
       .locator(
@@ -239,10 +243,10 @@ export async function getClickableLocator(page, target) {
       return xpathTitle;
     }
   } catch (e) {
-    // lanjut
+    // Continue to next strategy
   }
 
-  // 2n) XPath untuk button dengan aria-label
+  // === Strategy 2n: XPath for button with aria-label ===
   try {
     const xpathAriaLabel = page
       .locator(
@@ -253,22 +257,22 @@ export async function getClickableLocator(page, target) {
       return xpathAriaLabel;
     }
   } catch (e) {
-    // lanjut
+    // Continue to next strategy
   }
 
-  // 2o) Button dengan kombinasi class dan title (untuk Bootstrap buttons)
-  // Contoh: button.btn-outline-danger[title="Delete"]
+  // === Strategy 2o: Button with class and title combination (for Bootstrap buttons) ===
+  // Example: button.btn-outline-danger[title="Delete"]
   try {
     const btnByClassAndTitle = page.locator(`button[title="${t}" i]`).first();
     if (await validateElement(btnByClassAndTitle)) {
       return btnByClassAndTitle;
     }
   } catch (e) {
-    // lanjut
+    // Continue to next strategy
   }
 
-  // 2p) Button yang mengandung icon dengan title yang match
-  // Cari semua button, lalu filter yang memiliki title/aria-label yang match
+  // === Strategy 2p: Button containing icon with matching title ===
+  // === Search all buttons, then filter those with matching title/aria-label ===
   try {
     const allButtons = page.locator("button");
     const count = await allButtons.count();
@@ -283,7 +287,7 @@ export async function getClickableLocator(page, target) {
           .textContent({ timeout: 500 })
           .catch(() => "");
 
-        // Cek apakah title/aria-label/textContent match
+        // === Check if title/aria-label/textContent matches ===
         if (
           (title && containsTextRe.test(title)) ||
           (ariaLabel && containsTextRe.test(ariaLabel)) ||
@@ -298,30 +302,30 @@ export async function getClickableLocator(page, target) {
       }
     }
   } catch (e) {
-    // lanjut
+    // Continue to next strategy
   }
 
-  // 3) Link exact
+  // === Strategy 3: Link exact match ===
   try {
     const linkExact = page.getByRole("link", { name: t, exact: true }).first();
     if (await validateElement(linkExact)) {
       return linkExact;
     }
   } catch (e) {
-    // lanjut
+    // Continue to next strategy
   }
 
-  // Link exact regex
+  // === Strategy 3b: Link exact regex ===
   try {
     const linkRegex = page.getByRole("link", { name: exactTextRe }).first();
     if (await validateElement(linkRegex)) {
       return linkRegex;
     }
   } catch (e) {
-    // lanjut
+    // Continue to next strategy
   }
 
-  // Link contains dengan exact validation
+  // === Strategy 3c: Link contains with exact validation ===
   try {
     const link = page.getByRole("link", { name: t }).first();
     const textContent = await link.textContent({ timeout: 2000 });
@@ -331,10 +335,10 @@ export async function getClickableLocator(page, target) {
       }
     }
   } catch (e) {
-    // lanjut
+    // Continue to next strategy
   }
 
-  // 4) Fallback CSS text selectors
+  // === Strategy 4: Fallback CSS text selectors ===
   const esc = escapeForCssString(t);
   const candidates = [
     `button:text-is("${esc}")`,
@@ -362,7 +366,7 @@ export async function getClickableLocator(page, target) {
     }
   }
 
-  // 5) Cari text lalu naik ke ancestor yang clickable
+  // === Strategy 5: Find text then traverse to clickable ancestor ===
   try {
     const textLoc = page.getByText(t, { exact: true }).first();
     if (await textLoc.isVisible({ timeout: 2000 })) {
@@ -374,7 +378,7 @@ export async function getClickableLocator(page, target) {
       }
     }
   } catch (e) {
-    // lanjut
+    // Continue to next strategy
   }
 
   try {
@@ -391,7 +395,7 @@ export async function getClickableLocator(page, target) {
       }
     }
   } catch (e) {
-    // lanjut
+    // Continue to next strategy
   }
 
   try {
@@ -406,10 +410,10 @@ export async function getClickableLocator(page, target) {
       }
     }
   } catch (e) {
-    // lanjut
+    // Continue to next strategy
   }
 
-  // 6) XPath fallback untuk button dengan text exact
+  // === Strategy 6: XPath fallback for button with exact text ===
   try {
     const xpathButton = page
       .locator(
@@ -420,10 +424,10 @@ export async function getClickableLocator(page, target) {
       return xpathButton;
     }
   } catch (e) {
-    // lanjut
+    // Continue to next strategy
   }
 
-  // 7) XPath untuk elemen dengan role button
+  // === Strategy 7: XPath for element with role button ===
   try {
     const xpathRoleButton = page
       .locator(
@@ -434,48 +438,52 @@ export async function getClickableLocator(page, target) {
       return xpathRoleButton;
     }
   } catch (e) {
-    // lanjut
+    // Continue to next strategy
   }
 
   return null;
 }
 
 /**
- * Click element by text or selector
- * @param {Page} page - Playwright page object
- * @param {string} target - Text or selector to click
+ * Clicks an element identified by text content or CSS selector.
+ * Uses multiple click strategies to ensure reliable interaction.
+ *
+ * @param {Page} page - Playwright page object.
+ * @param {string} target - Text content or CSS selector to click.
+ * @throws {Error} If the target cannot be found or all click strategies fail.
  */
 export async function clickByTextOrSelector(page, target) {
+  // === Locate the clickable element ===
   const locator = await getClickableLocator(page, target);
   if (!locator) {
     throw new Error(`Click target not found: ${target}`);
   }
 
-  // Pastikan terlihat di viewport dulu
+  // === Ensure element is visible in viewport ===
   try {
     await locator.scrollIntoViewIfNeeded({ timeout: 3000 });
   } catch (e) {
-    // abaikan, lanjutkan
+    // Ignore and continue
   }
 
-  // Tunggu elemen benar-benar siap (visible dan enabled)
+  // === Wait for element to be ready (visible and enabled) ===
   try {
     await locator.waitFor({ state: "visible", timeout: 5000 });
   } catch (e) {
-    // abaikan, lanjutkan
+    // Ignore and continue
   }
 
-  // Coba beberapa strategi klik
+  // === Try multiple click strategies for reliability ===
   const clickStrategies = [
-    // 1. Normal click dengan auto-wait
+    // === Strategy 1: Normal click with auto-wait ===
     async () => {
       await locator.click({ timeout: 10000 });
     },
-    // 2. Click dengan force (untuk overlay/pointer-events)
+    // === Strategy 2: Force click (for overlay/pointer-events issues) ===
     async () => {
       await locator.click({ timeout: 10000, force: true });
     },
-    // 3. Click dengan JavaScript (bypass event handlers)
+    // === Strategy 3: JavaScript click (bypass event handlers) ===
     async () => {
       await locator.evaluate((el) => {
         if (el instanceof HTMLElement) {
@@ -483,24 +491,25 @@ export async function clickByTextOrSelector(page, target) {
         }
       });
     },
-    // 4. Dispatch click event manual
+    // === Strategy 4: Manual click event dispatch ===
     async () => {
       await locator.dispatchEvent("click");
     },
   ];
 
+  // === Attempt each strategy until one succeeds ===
   for (const strategy of clickStrategies) {
     try {
       await strategy();
-      // Tunggu sedikit untuk memastikan click terproses
+      // === Wait briefly to ensure click is processed ===
       await page.waitForTimeout(500);
       return;
     } catch (e) {
-      // Coba strategi berikutnya
+      // === Try next strategy ===
       continue;
     }
   }
 
-  // Jika semua strategi gagal, throw error
+  // === All strategies failed, throw error ===
   throw new Error(`Failed to click target: ${target}`);
 }
