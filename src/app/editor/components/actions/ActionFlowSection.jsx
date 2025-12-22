@@ -1,7 +1,5 @@
 "use client";
 
-import HumanTypingInput from "../HumanTypingInput";
-
 export default function ActionFlowSection({
   actions,
   setActions,
@@ -278,7 +276,7 @@ export default function ActionFlowSection({
                     <option value="text">Teks</option>
                     <option value="url">URL Pattern</option>
                   </select>
-                      <HumanTypingInput
+                      <input
                         type="text"
                         value={effectiveExecution.loop?.indicator?.value || ""}
                         onChange={(e) =>
@@ -399,7 +397,7 @@ export default function ActionFlowSection({
                         ))}
                       </select>
                     ) : action.type === "navigate" ? (
-                      <HumanTypingInput
+                      <input
                         type="text"
                         value={action.target}
                         onChange={(e) =>
@@ -409,7 +407,7 @@ export default function ActionFlowSection({
                         className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       />
                     ) : (
-                      <HumanTypingInput
+                      <input
                         type="text"
                         value={action.target}
                         onChange={(e) =>
@@ -428,7 +426,7 @@ export default function ActionFlowSection({
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Nilai (Opsional)
                     </label>
-                    <HumanTypingInput
+                    <input
                       type="text"
                       value={action.value || ""}
                       onChange={(e) =>
@@ -480,7 +478,7 @@ export default function ActionFlowSection({
                         <option value="text">Teks</option>
                         <option value="url">URL Pattern</option>
                       </select>
-                      <HumanTypingInput
+                      <input
                         type="text"
                         value={action.waitFor?.value || ""}
                         onChange={(e) =>
@@ -542,7 +540,7 @@ export default function ActionFlowSection({
               <option value="text">Teks</option>
               <option value="url">URL Pattern</option>
             </select>
-            <HumanTypingInput
+            <input
               type="text"
               value={successIndicator.value}
               onChange={(e) =>
@@ -577,7 +575,7 @@ export default function ActionFlowSection({
               <option value="text">Teks</option>
               <option value="url">URL Pattern</option>
             </select>
-            <HumanTypingInput
+            <input
               type="text"
               value={failureIndicator.value}
               onChange={(e) =>

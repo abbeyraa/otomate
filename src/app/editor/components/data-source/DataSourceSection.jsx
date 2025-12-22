@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import HumanTypingInput from "../HumanTypingInput";
 
 export default function DataSourceSection({
   dataSourceType,
@@ -226,7 +225,7 @@ export default function DataSourceSection({
               <div className="space-y-1 max-h-32 overflow-y-auto">
                 {manualColumns.map((col, idx) => (
                   <div key={idx} className="flex gap-1">
-                    <HumanTypingInput
+                    <input
                       type="text"
                       value={col}
                       onChange={(e) => renameManualColumn(idx, e.target.value)}
@@ -283,7 +282,7 @@ export default function DataSourceSection({
                             key={col}
                             className="border border-gray-300 px-1 py-0.5"
                           >
-                            <HumanTypingInput
+                            <input
                               type="text"
                               value={row[col] || ""}
                               onChange={(e) =>
