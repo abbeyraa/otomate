@@ -17,9 +17,10 @@ import { installDialogAutoAcceptIfNeeded } from "./dialog";
  * Executes the automation plan using Playwright.
  *
  * @param {Object} plan - The automation plan as defined from the UI.
+ * @param {boolean} safeRun - If true, skip submit actions (dry run mode).
  * @returns {Promise<Object>} - Detailed execution report.
  */
-export async function executeAutomationPlan(plan) {
+export async function executeAutomationPlan(plan, safeRun = false) {
   const { chromium } = await loadPlaywright();
   const browser = await chromium.launch({ headless: false });
   const context = await browser.newContext();
@@ -61,7 +62,8 @@ export async function executeAutomationPlan(plan) {
           normalizedPlan,
           rowData,
           i,
-          normalizedPlan.target.url
+          normalizedPlan.target.url,
+          safeRun
         );
         results.push(result);
 
@@ -90,7 +92,8 @@ export async function executeAutomationPlan(plan) {
           page,
           normalizedPlan,
           rowData,
-          normalizedPlan.target.url
+          normalizedPlan.target.url,
+          safeRun
         );
         results.push(...loopResults);
       } else {
@@ -100,7 +103,8 @@ export async function executeAutomationPlan(plan) {
           normalizedPlan,
           rowData,
           rowIndex,
-          normalizedPlan.target.url
+          normalizedPlan.target.url,
+          safeRun
         );
         results.push(result);
       }
@@ -126,6 +130,7 @@ export async function executeAutomationPlan(plan) {
       summary,
       results,
       duration,
+      safeRun, // Include safeRun flag in report
     };
   } catch (error) {
     // === Error handling: Return error status and message in report ===

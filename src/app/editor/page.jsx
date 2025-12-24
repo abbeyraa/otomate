@@ -4,6 +4,7 @@
    Import dependencies & komponen
 ========================== */
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   Background,
   Controls,
@@ -13,12 +14,15 @@ import {
 } from "@xyflow/react";
 import { extractAllRows, getXlsxSheets } from "@/lib/api";
 import { runAutomation } from "@/app/actions/runAutomation";
+import { saveEditorState, loadEditorState, clearEditorState, saveExecutionLog } from "@/lib/sessionStorage";
+import { exportToCSV, exportToPDF } from "@/lib/exportUtils";
 import TargetConfiguration from "@/app/editor/components/target/TargetConfiguration";
 import DataSourceSection from "@/app/editor/components/data-source/DataSourceSection";
 import FieldMappingSection from "@/app/editor/components/field-mapping/FieldMappingSection";
 import ActionFlowSection from "@/app/editor/components/actions/ActionFlowSection";
 import AutomationPlanPreview from "@/app/editor/components/execution/AutomationPlanPreview";
 import ExecutionReport from "@/app/editor/components/execution/ExecutionReport";
+import AssistedRepairDialog from "@/app/editor/components/execution/AssistedRepairDialog";
 import CardNode from "./components/nodes/CardNode";
 import AddDataSourceNode from "./components/data-source/AddDataSourceNode";
 import PaletteNode from "./components/nodes/PaletteNode";
@@ -97,6 +101,8 @@ function getDefaultEdges() {
    Komponen Utama: EditorPage
 ============================================================= */
 export default function EditorPage() {
+  const searchParams = useSearchParams();
+  
   /* -----------------------------------
      ReactFlow state terkait canvas visual editor
   ----------------------------------- */
@@ -356,12 +362,6 @@ export default function EditorPage() {
     return nodes.some((node) => node.id === NODE_IDS.DATA);
   }, [nodes]);
 
-  // Update context untuk header palette
-  const { setHasDataSourceNode: setContextHasDataSourceNode } = useEditor();
-  useEffect(() => {
-    setContextHasDataSourceNode(hasDataSourceNode);
-  }, [hasDataSourceNode, setContextHasDataSourceNode]);
-
   /* -----------------------------------
      State: Target Configuration (target URL, login, navigasi, page-ready)
   ----------------------------------- */
@@ -414,6 +414,236 @@ export default function EditorPage() {
       indicator: { type: "selector", value: "" },
     },
   });
+
+  // Safe run mode
+  const [safeRun, setSafeRun] = useState(false);
+  
+  // Assisted repair mode
+  const [assistedRepairMode, setAssistedRepairMode] = useState(false);
+  const [repairDialogOpen, setRepairDialogOpen] = useState(false);
+  const [currentFailureResult, setCurrentFailureResult] = useState(null);
+  const [executionState, setExecutionState] = useState(null);
+
+  /* -----------------------------------
+     Effect: Load state from localStorage on mount
+  ----------------------------------- */
+  useEffect(() => {
+    const savedState = loadEditorState();
+    if (savedState) {
+      // Restore state
+      setTargetUrl(savedState.targetUrl || "");
+      setRequiresLogin(savedState.requiresLogin || false);
+      setLoginUrl(savedState.loginUrl || "");
+      setLoginUsername(savedState.loginUsername || "");
+      setLoginPassword(savedState.loginPassword || "");
+      setNavigationSteps(savedState.navigationSteps || []);
+      setPageReadyType(savedState.pageReadyType || "selector");
+      setPageReadyValue(savedState.pageReadyValue || "");
+      setDataSourceType(savedState.dataSourceType || "upload");
+      setRows(savedState.rows || []);
+      setManualRows(savedState.manualRows || [{}]);
+      setManualColumns(savedState.manualColumns || ["field1"]);
+      setDataMode(savedState.dataMode || "single");
+      setXlsxSheets(savedState.xlsxSheets || []);
+      setSelectedSheet(savedState.selectedSheet || "");
+      setSelectedRowIndex(savedState.selectedRowIndex || 0);
+      setFieldMappings(savedState.fieldMappings || []);
+      setSuccessIndicator(savedState.successIndicator || { type: "selector", value: "" });
+      setFailureIndicator(savedState.failureIndicator || { type: "selector", value: "" });
+      setExecution(savedState.execution || {
+        mode: "once",
+        loop: {
+          maxIterations: 50,
+          delaySeconds: 0,
+          stopWhen: "notVisible",
+          indicator: { type: "selector", value: "" },
+        },
+      });
+      
+      // Restore nodes and edges
+      if (savedState.nodes && savedState.nodes.length > 0) {
+        setNodes(savedState.nodes);
+      }
+      if (savedState.edges && savedState.edges.length > 0) {
+        setEdges(savedState.edges);
+      }
+    }
+  }, []); // Only on mount
+
+  /* -----------------------------------
+     Effect: Auto-save state to localStorage
+  ----------------------------------- */
+  useEffect(() => {
+    // Debounce save to avoid too frequent writes
+    const timeoutId = setTimeout(() => {
+      saveEditorState({
+        targetUrl,
+        requiresLogin,
+        loginUrl,
+        loginUsername,
+        loginPassword,
+        navigationSteps,
+        pageReadyType,
+        pageReadyValue,
+        dataSourceType,
+        rows,
+        manualRows,
+        manualColumns,
+        dataMode,
+        xlsxSheets,
+        selectedSheet,
+        selectedRowIndex,
+        fieldMappings,
+        nodes,
+        edges,
+        successIndicator,
+        failureIndicator,
+        execution,
+      });
+    }, 1000); // Save after 1 second of inactivity
+
+    return () => clearTimeout(timeoutId);
+  }, [
+    targetUrl,
+    requiresLogin,
+    loginUrl,
+    loginUsername,
+    loginPassword,
+    navigationSteps,
+    pageReadyType,
+    pageReadyValue,
+    dataSourceType,
+    rows,
+    manualRows,
+    manualColumns,
+    dataMode,
+    xlsxSheets,
+    selectedSheet,
+    selectedRowIndex,
+    fieldMappings,
+    nodes,
+    edges,
+    successIndicator,
+    failureIndicator,
+    execution,
+  ]);
+
+  // Update context untuk header palette
+  const { setHasDataSourceNode: setContextHasDataSourceNode } = useEditor();
+  useEffect(() => {
+    setContextHasDataSourceNode(hasDataSourceNode);
+  }, [hasDataSourceNode, setContextHasDataSourceNode]);
+
+  /* -----------------------------------
+     Effect: Import draft actions from Inspector
+  ----------------------------------- */
+  useEffect(() => {
+    const importDraft = searchParams?.get("importDraft");
+    if (importDraft === "true") {
+      const draftData = localStorage.getItem("inspector_draft_actions");
+      if (draftData) {
+        try {
+          const draft = JSON.parse(draftData);
+          if (draft.actions && draft.actions.length > 0) {
+            // Set target URL if available
+            if (draft.metadata?.url) {
+              setTargetUrl(draft.metadata.url);
+            }
+
+            // Create action nodes from draft
+            const newActionNodes = [];
+            draft.actions.forEach((action, index) => {
+              const actionId = `action-${Date.now()}-${index}-${Math.random().toString(36).substr(2, 9)}`;
+              
+              // Calculate position
+              const baseY = 200; // Below target node
+              const actionY = baseY + (index * 110);
+
+              let actionData = {
+                actionType: action.type,
+                actionTarget: action.target || "",
+                actionValue: action.value,
+                actionWaitFor: action.waitFor,
+              };
+
+              // Special handling for different action types
+              if (action.type === "wait" && action.waitFor) {
+                actionData.actionWaitFor = action.waitFor;
+              }
+
+              newActionNodes.push({
+                id: actionId,
+                type: "action",
+                position: { x: 60, y: actionY },
+                data: actionData,
+              });
+            });
+
+            // Add nodes to canvas
+            if (newActionNodes.length > 0) {
+              setNodes((prev) => {
+                const updated = [...prev, ...newActionNodes];
+                return updated;
+              });
+
+              // Create edges
+              setEdges((prev) => {
+                const newEdges = [...prev];
+                
+                // Connect first action from target or mapping
+                if (newActionNodes.length > 0) {
+                  const mappingNode = prev.find((n) => n.id === "mapping");
+                  const sourceId = mappingNode ? "mapping" : "target";
+                  
+                  newEdges.push({
+                    id: `e-${sourceId}-${newActionNodes[0].id}`,
+                    source: sourceId,
+                    target: newActionNodes[0].id,
+                    animated: true,
+                  });
+
+                  // Connect actions in sequence
+                  for (let i = 0; i < newActionNodes.length - 1; i++) {
+                    newEdges.push({
+                      id: `e-${newActionNodes[i].id}-${newActionNodes[i + 1].id}`,
+                      source: newActionNodes[i].id,
+                      target: newActionNodes[i + 1].id,
+                      animated: true,
+                    });
+                  }
+
+                  // Connect last action to preview
+                  const lastAction = newActionNodes[newActionNodes.length - 1];
+                  newEdges.push({
+                    id: `e-${lastAction.id}-preview`,
+                    source: lastAction.id,
+                    target: "preview",
+                    animated: true,
+                  });
+                }
+
+                return newEdges;
+              });
+
+              alert(
+                `Berhasil mengimpor ${newActionNodes.length} action dari Inspector!`
+              );
+              
+              // Clear draft from localStorage
+              localStorage.removeItem("inspector_draft_actions");
+              
+              // Remove query param
+              window.history.replaceState({}, "", "/create-template");
+            }
+          }
+        } catch (error) {
+          console.error("Failed to import draft:", error);
+          alert("Gagal mengimpor draft dari Inspector");
+        }
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   // Helper: Get action nodes dari nodes
   const actionNodes = useMemo(() => {
@@ -606,17 +836,37 @@ export default function EditorPage() {
     setIsExecuting(true);
     setExecutionReport(null);
 
+    let plan = null;
     try {
-      const report = await runAutomation(generateAutomationPlan());
+      plan = generateAutomationPlan();
+      const report = await runAutomation(plan, safeRun);
       setExecutionReport(report);
       setActivePanel("preview");
+      
+      // Save execution log
+      if (plan) {
+        saveExecutionLog(report, plan);
+      }
     } catch (error) {
       console.error("Execution error:", error);
-      setExecutionReport({
+      const errorReport = {
         status: "error",
         message: error.message,
-      });
+        safeRun,
+      };
+      setExecutionReport(errorReport);
       setActivePanel("preview");
+      
+      // Save error log too (use plan if available, otherwise create minimal plan)
+      if (plan) {
+        saveExecutionLog(errorReport, plan);
+      } else {
+        // Create minimal plan for error log
+        const minimalPlan = {
+          target: { url: targetUrl || "" },
+        };
+        saveExecutionLog(errorReport, minimalPlan);
+      }
     } finally {
       setIsExecuting(false);
     }
@@ -1471,16 +1721,138 @@ export default function EditorPage() {
       {/* ============== END SECTION: DETAIL PANEL - INSIDE CANVAS ============= */}
 
       {/* ============== SECTION: BUTTON JALANKAN (BOTTOM FIXED) ============= */}
-      <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50">
-        <button
-          onClick={handleRun}
-          disabled={isExecuting}
-          className="px-6 py-2.5 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-xl"
-        >
-          {isExecuting ? "Menjalankan..." : "Jalankan Automation Plan"}
-        </button>
+      <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50 flex flex-col items-center gap-3">
+        {/* Mode Toggles */}
+        <div className="flex items-center gap-3 bg-white px-4 py-2 rounded-lg shadow-lg border border-gray-200">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={safeRun}
+              onChange={(e) => setSafeRun(e.target.checked)}
+              disabled={isExecuting}
+              className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+            />
+            <span className="text-sm font-medium text-gray-700">
+              Safe Run Mode
+            </span>
+            <span className="text-xs text-gray-500">(Skip submit)</span>
+          </label>
+          <div className="w-px h-6 bg-gray-300"></div>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={assistedRepairMode}
+              onChange={(e) => setAssistedRepairMode(e.target.checked)}
+              disabled={isExecuting}
+              className="w-4 h-4 text-green-600 rounded focus:ring-green-500"
+            />
+            <span className="text-sm font-medium text-gray-700">
+              Assisted Repair
+            </span>
+            <span className="text-xs text-gray-500">(Pause on failure)</span>
+          </label>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex items-center gap-2">
+          {/* Reset Button */}
+          <button
+            onClick={() => {
+              if (confirm("Apakah Anda yakin ingin reset semua setup? Semua data akan dihapus.")) {
+                // Reset all state
+                setTargetUrl("");
+                setRequiresLogin(false);
+                setLoginUrl("");
+                setLoginUsername("");
+                setLoginPassword("");
+                setNavigationSteps([]);
+                setPageReadyType("selector");
+                setPageReadyValue("");
+                setDataSourceType("upload");
+                setRows([]);
+                setManualRows([{}]);
+                setManualColumns(["field1"]);
+                setDataMode("single");
+                setXlsxSheets([]);
+                setSelectedSheet("");
+                setSelectedRowIndex(0);
+                setFieldMappings([]);
+                setSuccessIndicator({ type: "selector", value: "" });
+                setFailureIndicator({ type: "selector", value: "" });
+                setExecution({
+                  mode: "once",
+                  loop: {
+                    maxIterations: 50,
+                    delaySeconds: 0,
+                    stopWhen: "notVisible",
+                    indicator: { type: "selector", value: "" },
+                  },
+                });
+                setNodes(getDefaultNodes(false));
+                setEdges(getDefaultEdges());
+                setExecutionReport(null);
+                setSafeRun(false);
+                clearEditorState();
+                alert("Setup telah direset!");
+              }
+            }}
+            disabled={isExecuting}
+            className="px-4 py-2 bg-gray-600 text-white rounded-lg font-medium hover:bg-gray-700 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-lg"
+          >
+            Reset
+          </button>
+
+          {/* Export Buttons (only show if there's a report) */}
+          {executionReport && (
+            <>
+              <button
+                onClick={() => exportToCSV(executionReport, generateAutomationPlan())}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 cursor-pointer transition-colors shadow-lg"
+              >
+                Export CSV
+              </button>
+              <button
+                onClick={() => exportToPDF(executionReport, generateAutomationPlan())}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 cursor-pointer transition-colors shadow-lg"
+              >
+                Export PDF
+              </button>
+            </>
+          )}
+
+          {/* Run Button */}
+          <button
+            onClick={handleRun}
+            disabled={isExecuting}
+            className="px-6 py-2.5 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-xl"
+          >
+            {isExecuting ? "Menjalankan..." : safeRun ? "Jalankan (Safe Run)" : "Jalankan Automation Plan"}
+          </button>
+        </div>
       </div>
       {/* ============== END SECTION: BUTTON JALANKAN ============= */}
+
+      {/* Assisted Repair Dialog */}
+      {repairDialogOpen && currentFailureResult && executionState && (
+        <AssistedRepairDialog
+          failureResult={currentFailureResult}
+          executionState={executionState}
+          onRepairDecision={(decision) => {
+            // Handle repair decision
+            console.log("Repair decision:", decision);
+            setRepairDialogOpen(false);
+            // TODO: Implement resume logic based on decision
+            alert(
+              `Repair decision: ${decision.action}. Resume logic akan diimplementasikan untuk komunikasi dengan server-side runner.`
+            );
+          }}
+          onClose={() => {
+            setRepairDialogOpen(false);
+            setCurrentFailureResult(null);
+            setExecutionState(null);
+          }}
+        />
+      )}
     </div>
   );
 }

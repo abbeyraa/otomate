@@ -4,6 +4,7 @@ import { clickByTextOrSelector } from "./clickHandler";
 import { waitForIndicator, checkIndicator } from "./indicators";
 import { waitForPageReady } from "./indicators";
 import { installDialogAutoAcceptIfNeeded } from "./dialog";
+import { createFailureMetadata } from "../failureIntelligence";
 
 /**
  * Executes a single automation action based on its type.
@@ -18,7 +19,7 @@ import { installDialogAutoAcceptIfNeeded } from "./dialog";
  * @param {Object} rowData - Row data for fill actions (field mapping).
  * @returns {Promise<Object>} Action execution result with success status.
  */
-export async function executeAction(page, action, plan, rowData) {
+export async function executeAction(page, action, plan, rowData, safeRun = false, context = {}) {
   try {
     switch (action.type) {
       case "fill": {
@@ -45,11 +46,21 @@ export async function executeAction(page, action, plan, rowData) {
         );
 
         if (!element) {
-          throw new Error(
+          const error = new Error(
             `Element not found for field: ${
               fieldMapping.name
             } with labels: ${fieldMapping.labels.join(", ")}`
           );
+          // Attach failure metadata for intelligence
+          error.failureMetadata = createFailureMetadata(error, {
+            ...context,
+            actionType: "fill",
+            target: fieldMapping.labels.join(", "),
+            fieldName: fieldMapping.name,
+            fieldMapping,
+            elementType: fieldMapping.type,
+          });
+          throw error;
         }
 
         // === Fill element based on field type ===
@@ -70,6 +81,29 @@ export async function executeAction(page, action, plan, rowData) {
       }
 
       case "click": {
+        // === Safe Run: Skip submit button clicks ===
+        if (safeRun) {
+          const targetLower = String(action.target || "").toLowerCase();
+          const isSubmitButton =
+            targetLower.includes("submit") ||
+            targetLower.includes("kirim") ||
+            targetLower.includes("simpan") ||
+            targetLower.includes("save") ||
+            targetLower.includes("send") ||
+            action.target === "button[type='submit']" ||
+            action.target === "input[type='submit']";
+          
+          if (isSubmitButton) {
+            return {
+              type: action.type,
+              target: action.target,
+              success: true,
+              skipped: true,
+              reason: "Safe run mode: submit button click skipped",
+            };
+          }
+        }
+        
         // === Execute click action on target element ===
         await clickByTextOrSelector(page, action.target);
         return { type: action.type, target: action.target, success: true };
@@ -111,12 +145,22 @@ export async function executeAction(page, action, plan, rowData) {
         throw new Error(`Unknown action type: ${action.type}`);
     }
   } catch (error) {
+    // === Attach failure metadata if not already attached ===
+    if (!error.failureMetadata) {
+      error.failureMetadata = createFailureMetadata(error, {
+        ...context,
+        actionType: action.type,
+        target: action.target,
+      });
+    }
+    
     // === Return error result if action execution fails ===
     return {
       type: action.type,
       target: action.target,
       success: false,
       error: error.message,
+      failureMetadata: error.failureMetadata,
     };
   }
 }
@@ -138,7 +182,8 @@ export async function executeActionsForRow(
   plan,
   rowData,
   rowIndex,
-  targetUrl
+  targetUrl,
+  safeRun = false
 ) {
   const actionResults = [];
   const startTime = Date.now();
@@ -153,8 +198,20 @@ export async function executeActionsForRow(
     }
 
     // === Execute each action in sequence ===
-    for (const action of plan.actions) {
-      const actionResult = await executeAction(page, action, plan, rowData);
+    for (let actionIndex = 0; actionIndex < plan.actions.length; actionIndex++) {
+      const action = plan.actions[actionIndex];
+      const actionResult = await executeAction(page, action, plan, rowData, safeRun, {
+        rowIndex,
+        actionIndex,
+        actionType: action.type,
+        target: action.target,
+        dataRow: rowData,
+        pageUrl: targetUrl,
+        fieldMapping: action.type === "fill" 
+          ? plan.fieldMappings.find((fm) => fm.name === action.target)
+          : null,
+        pageReadyIndicator: plan.target.pageReadyIndicator,
+      });
       actionResults.push(actionResult);
 
       // === Stop execution if required action fails ===
@@ -196,6 +253,20 @@ export async function executeActionsForRow(
       duration: Date.now() - startTime,
     };
   } catch (error) {
+    // === Create failure metadata if not already attached ===
+    let failureMetadata = error.failureMetadata;
+    if (!failureMetadata) {
+      failureMetadata = createFailureMetadata(error, {
+        rowIndex,
+        actionIndex: actionResults.length,
+        actionType: plan.actions[actionResults.length]?.type,
+        target: plan.actions[actionResults.length]?.target,
+        dataRow: rowData,
+        pageUrl: targetUrl,
+        pageReadyIndicator: plan.target.pageReadyIndicator,
+      });
+    }
+    
     // === Return failed result with error details ===
     return {
       rowIndex,
@@ -205,6 +276,7 @@ export async function executeActionsForRow(
       error: error.message,
       warnings,
       duration: Date.now() - startTime,
+      failureMetadata,
     };
   }
 }
@@ -220,7 +292,7 @@ export async function executeActionsForRow(
  * @returns {Promise<Array>} Array of execution results for each iteration.
  * @throws {Error} If loop indicator configuration is missing.
  */
-export async function executeActionsWithLoop(page, plan, rowData, targetUrl) {
+export async function executeActionsWithLoop(page, plan, rowData, targetUrl, safeRun = false) {
   // === Extract loop configuration with defaults ===
   const loop = plan.execution?.loop || {};
   const maxIterations = Number(loop.maxIterations ?? 50);
@@ -269,7 +341,8 @@ export async function executeActionsWithLoop(page, plan, rowData, targetUrl) {
       plan,
       rowData,
       i,
-      targetUrl
+      targetUrl,
+      safeRun
     );
     iterations.push(result);
 

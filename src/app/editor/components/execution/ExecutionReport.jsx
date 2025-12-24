@@ -1,5 +1,7 @@
 "use client";
 
+import IntelligentExecutionReport from "./IntelligentExecutionReport";
+
 // Constants untuk status styling
 const STATUS_COLORS = {
   success: "bg-green-100 text-green-800 border-green-300",
@@ -24,6 +26,9 @@ const getStatusIcon = (status) => STATUS_ICONS[status] || STATUS_ICONS.default;
 
 export default function ExecutionReport({ report }) {
   if (!report) return null;
+
+  // Use intelligent report if available
+  return <IntelligentExecutionReport report={report} />;
 
   return (
     <div className="bg-white rounded-lg shadow-md p-3">
