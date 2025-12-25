@@ -1,7 +1,8 @@
 "use client";
 
 import { Settings as SettingsIcon, Database } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { getSettings, saveSettings } from "@/lib/settingsStorage";
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState({
@@ -10,11 +11,27 @@ export default function SettingsPage() {
     language: "id",
   });
 
+  useEffect(() => {
+    const loadedSettings = getSettings();
+    setSettings(loadedSettings);
+  }, []);
+
   const handleToggle = (key) => {
-    setSettings((prev) => ({
-      ...prev,
-      [key]: !prev[key],
-    }));
+    const newSettings = {
+      ...settings,
+      [key]: !settings[key],
+    };
+    setSettings(newSettings);
+    saveSettings(newSettings);
+  };
+
+  const handleChange = (key, value) => {
+    const newSettings = {
+      ...settings,
+      [key]: value,
+    };
+    setSettings(newSettings);
+    saveSettings(newSettings);
   };
 
   const settingSections = [
@@ -146,10 +163,7 @@ export default function SettingsPage() {
                           <select
                             value={settings[setting.key]}
                             onChange={(e) =>
-                              setSettings((prev) => ({
-                                ...prev,
-                                [setting.key]: e.target.value,
-                              }))
+                              handleChange(setting.key, e.target.value)
                             }
                             className="px-3 py-2 border border-[#e5e5e5] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                           >

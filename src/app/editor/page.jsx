@@ -26,10 +26,12 @@ import {
   loadEditorState,
   saveExecutionLog,
 } from "@/lib/sessionStorage";
+import { getSetting } from "@/lib/settingsStorage";
 import StepCard from "./components/steps/StepCard";
 import StepEditor from "./components/steps/StepEditor";
 import AutomationPlanPreview from "./components/execution/AutomationPlanPreview";
 import ExecutionReport from "./components/execution/ExecutionReport";
+import SaveTemplateDialog from "./components/SaveTemplateDialog";
 import { validateAutomationPlan } from "./utils/validationHelpers";
 import {
   Play,
@@ -39,6 +41,29 @@ import {
   CheckCircle2,
   AlertCircle,
 } from "lucide-react";
+
+const TEMPLATES_STORAGE_KEY = "otomate_templates";
+
+// Helper functions untuk template
+const getTemplates = () => {
+  try {
+    const stored = localStorage.getItem(TEMPLATES_STORAGE_KEY);
+    if (stored) return JSON.parse(stored);
+  } catch (error) {
+    console.error("Failed to load templates:", error);
+  }
+  return [];
+};
+
+const saveTemplates = (templates) => {
+  try {
+    localStorage.setItem(TEMPLATES_STORAGE_KEY, JSON.stringify(templates));
+    return true;
+  } catch (error) {
+    console.error("Failed to save templates:", error);
+    return false;
+  }
+};
 
 // Helper untuk convert state ke steps
 const convertStateToSteps = (state) => {
@@ -309,6 +334,14 @@ export default function EditorPage() {
   const [isExecuting, setIsExecuting] = useState(false);
   const [executionReport, setExecutionReport] = useState(null);
   const [safeRun, setSafeRun] = useState(false);
+  const [saveTemplateDialogOpen, setSaveTemplateDialogOpen] = useState(false);
+  const [templateName, setTemplateName] = useState("Automation Plan Editor");
+  const [templateDescription, setTemplateDescription] = useState(
+    "Susun langkah-langkah automasi dengan drag & drop"
+  );
+  const [currentTemplateId, setCurrentTemplateId] = useState(null);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [isEditingDescription, setIsEditingDescription] = useState(false);
 
   // Editor state (mirror dari state lama untuk kompatibilitas)
   const [targetUrl, setTargetUrl] = useState("");
@@ -358,8 +391,77 @@ export default function EditorPage() {
     })
   );
 
-  // Load state on mount
+  // Load template if templateId in URL
   useEffect(() => {
+    const templateId = searchParams.get("templateId");
+    if (templateId) {
+      const templates = getTemplates();
+      const template = templates.find((t) => t.id === templateId);
+      if (template) {
+        setCurrentTemplateId(template.id);
+        setTemplateName(template.name);
+        setTemplateDescription(template.description || "");
+        
+        // Load template plan
+        const activeVersion = template.versions?.find((v) => v.isActive);
+        if (activeVersion?.plan) {
+          const plan = activeVersion.plan;
+          if (plan.target) {
+            setTargetUrl(plan.target.url || "");
+            setPageReadyType(plan.target.pageReadyIndicator?.type || "selector");
+            setPageReadyValue(plan.target.pageReadyIndicator?.value || "");
+            if (plan.target.login) {
+              setRequiresLogin(true);
+              setLoginUrl(plan.target.login.url || "");
+              setLoginUsername(plan.target.login.username || "");
+              setLoginPassword(plan.target.login.password || "");
+            }
+            if (plan.target.navigation) {
+              setNavigationSteps(plan.target.navigation || []);
+            }
+          }
+          if (plan.dataSource) {
+            setDataSourceType(plan.dataSource.type || "upload");
+            setRows(plan.dataSource.rows || []);
+            setDataMode(plan.dataSource.mode || "single");
+            setSelectedRowIndex(plan.dataSource.selectedRowIndex || 0);
+          }
+          if (plan.fieldMappings) {
+            setFieldMappings(plan.fieldMappings || []);
+          }
+          if (plan.actions) {
+            const actions = plan.actions.map((action, index) => ({
+              id: `action-${Date.now()}-${index}`,
+              type: "action",
+              position: { x: 60, y: 200 + index * 100 },
+              data: {
+                actionType: action.type,
+                actionTarget: action.target,
+                actionValue: action.value,
+                actionWaitFor: action.waitFor,
+              },
+            }));
+            setActionNodes(actions);
+          }
+          if (plan.successIndicator) {
+            setSuccessIndicator(plan.successIndicator);
+          }
+          if (plan.failureIndicator) {
+            setFailureIndicator(plan.failureIndicator);
+          }
+          if (plan.execution) {
+            setExecution(plan.execution);
+          }
+        }
+        return; // Don't load editor state if template is loaded
+      }
+    }
+  }, [searchParams]);
+
+  // Load state on mount (only if no template loaded)
+  useEffect(() => {
+    if (currentTemplateId) return; // Skip if template is loaded
+    
     const savedState = loadEditorState();
     if (savedState) {
       setTargetUrl(savedState.targetUrl || "");
@@ -387,13 +489,13 @@ export default function EditorPage() {
       );
       setExecution(
         savedState.execution || {
-          mode: "once",
-          loop: {
-            maxIterations: 50,
-            delaySeconds: 0,
-            stopWhen: "notVisible",
-            indicator: { type: "selector", value: "" },
-          },
+        mode: "once",
+        loop: {
+          maxIterations: 50,
+          delaySeconds: 0,
+          stopWhen: "notVisible",
+          indicator: { type: "selector", value: "" },
+        },
         }
       );
 
@@ -425,28 +527,28 @@ export default function EditorPage() {
 
   useEffect(() => {
     const currentState = {
-      targetUrl,
-      requiresLogin,
-      loginUrl,
-      loginUsername,
-      loginPassword,
-      navigationSteps,
-      pageReadyType,
-      pageReadyValue,
+        targetUrl,
+        requiresLogin,
+        loginUrl,
+        loginUsername,
+        loginPassword,
+        navigationSteps,
+        pageReadyType,
+        pageReadyValue,
       hasDataSourceNode,
-      dataSourceType,
-      rows,
-      manualRows,
-      manualColumns,
-      dataMode,
-      xlsxSheets,
-      selectedSheet,
-      selectedRowIndex,
-      fieldMappings,
+        dataSourceType,
+        rows,
+        manualRows,
+        manualColumns,
+        dataMode,
+        xlsxSheets,
+        selectedSheet,
+        selectedRowIndex,
+        fieldMappings,
       actionNodes,
-      successIndicator,
-      failureIndicator,
-      execution,
+        successIndicator,
+        failureIndicator,
+        execution,
     };
     const newSteps = convertStateToSteps(currentState);
     setSteps(newSteps);
@@ -516,6 +618,74 @@ export default function EditorPage() {
     }, 1000);
     return () => clearTimeout(timeoutId);
   }, [
+    targetUrl,
+    requiresLogin,
+    loginUrl,
+    loginUsername,
+    loginPassword,
+    navigationSteps,
+    pageReadyType,
+    pageReadyValue,
+    dataSourceType,
+    rows,
+    manualRows,
+    manualColumns,
+    dataMode,
+    xlsxSheets,
+    selectedSheet,
+    selectedRowIndex,
+    fieldMappings,
+    actionNodes,
+    successIndicator,
+    failureIndicator,
+    execution,
+  ]);
+
+  // Auto-save template if autosave is enabled and template exists
+  useEffect(() => {
+    if (!currentTemplateId) return;
+    
+    const autoSaveEnabled = getSetting("autoSave");
+    if (!autoSaveEnabled) return;
+
+    const timeoutId = setTimeout(() => {
+      const plan = generateAutomationPlan();
+      if (!plan.target?.url) return; // Don't save if invalid
+
+      const templates = getTemplates();
+      const template = templates.find((t) => t.id === currentTemplateId);
+      if (!template) return;
+
+      // Update template name and description
+      template.name = templateName;
+      template.description = templateDescription;
+      template.updatedAt = new Date().toISOString();
+
+      // Update active version plan
+      const activeVersion = template.versions.find((v) => v.isActive);
+      if (activeVersion) {
+        activeVersion.plan = plan;
+        activeVersion.notes = `Auto-saved at ${new Date().toLocaleString("id-ID")}`;
+      }
+
+      // Update metadata
+      template.metadata = {
+        targetUrl: plan.target?.url || "",
+        actionCount: plan.actions?.length || 0,
+        fieldMappingCount: plan.fieldMappings?.length || 0,
+      };
+
+      const updated = templates.map((t) =>
+        t.id === currentTemplateId ? template : t
+      );
+      saveTemplates(updated);
+    }, 2000); // Debounce 2 seconds
+
+    return () => clearTimeout(timeoutId);
+  }, [
+    currentTemplateId,
+    templateName,
+    templateDescription,
     targetUrl,
     requiresLogin,
     loginUrl,
@@ -763,6 +933,96 @@ export default function EditorPage() {
     return plan;
   };
 
+  // Save template
+  const handleSaveTemplate = (templateData) => {
+    const plan = generateAutomationPlan();
+    
+    // Validasi minimal
+    if (!plan.target?.url) {
+      alert("Target URL harus diisi sebelum menyimpan template");
+      return;
+    }
+
+    const templates = getTemplates();
+    
+    const templateId = currentTemplateId || `template-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const name = templateData.name || templateName || "Untitled Template";
+    const description = templateData.description || templateDescription || "";
+
+    if (currentTemplateId) {
+      // Update existing template
+      const template = templates.find((t) => t.id === currentTemplateId);
+      if (template) {
+        template.name = name;
+        template.description = description;
+        template.updatedAt = new Date().toISOString();
+
+        // Update active version plan
+        const activeVersion = template.versions.find((v) => v.isActive);
+        if (activeVersion) {
+          activeVersion.plan = plan;
+        }
+
+        // Update metadata
+        template.metadata = {
+          targetUrl: plan.target?.url || "",
+          actionCount: plan.actions?.length || 0,
+          fieldMappingCount: plan.fieldMappings?.length || 0,
+        };
+
+        const updated = templates.map((t) =>
+          t.id === currentTemplateId ? template : t
+        );
+        if (saveTemplates(updated)) {
+          setTemplateName(name);
+          setTemplateDescription(description);
+          setSaveTemplateDialogOpen(false);
+          alert("Template berhasil diperbarui!");
+        } else {
+          alert("Gagal menyimpan template. Silakan coba lagi.");
+        }
+        return;
+      }
+    }
+
+    // Create new template
+    const newTemplate = {
+      id: templateId,
+      name: name,
+      description: description,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      lastUsed: null,
+      isActive: true,
+      versions: [
+        {
+          version: "1.0.0",
+          plan: plan,
+          createdAt: new Date().toISOString(),
+          createdBy: "System",
+          isActive: true,
+          notes: "Initial version",
+        },
+      ],
+      metadata: {
+        targetUrl: plan.target?.url || "",
+        actionCount: plan.actions?.length || 0,
+        fieldMappingCount: plan.fieldMappings?.length || 0,
+      },
+    };
+
+    const updated = [...templates, newTemplate];
+    if (saveTemplates(updated)) {
+      setCurrentTemplateId(templateId);
+      setTemplateName(name);
+      setTemplateDescription(description);
+      setSaveTemplateDialogOpen(false);
+      alert("Template berhasil disimpan!");
+    } else {
+      alert("Gagal menyimpan template. Silakan coba lagi.");
+    }
+  };
+
   // Run automation
   const handleRun = async () => {
     const errors = validateAutomationPlan({
@@ -799,7 +1059,7 @@ export default function EditorPage() {
       plan = generateAutomationPlan();
       const report = await runAutomation(plan, safeRun);
       setExecutionReport(report);
-
+      
       if (plan) {
         saveExecutionLog(report, plan);
       }
@@ -811,7 +1071,7 @@ export default function EditorPage() {
         safeRun,
       };
       setExecutionReport(errorReport);
-
+      
       if (plan) {
         saveExecutionLog(errorReport, plan);
       } else {
@@ -830,13 +1090,59 @@ export default function EditorPage() {
       {/* Header */}
       <div className="px-8 py-4 border-b border-[#e5e5e5] bg-white">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-bold text-gray-900">
-              Automation Plan Editor
-            </h1>
-            <p className="text-sm text-gray-600 mt-1">
-              Susun langkah-langkah automasi dengan drag & drop
-            </p>
+          <div className="flex-1">
+            {isEditingName ? (
+              <input
+                type="text"
+                value={templateName}
+                onChange={(e) => setTemplateName(e.target.value)}
+                onBlur={() => setIsEditingName(false)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    setIsEditingName(false);
+                  }
+                  if (e.key === "Escape") {
+                    setIsEditingName(false);
+                  }
+                }}
+                className="text-xl font-bold text-gray-900 bg-transparent border-b-2 border-blue-500 focus:outline-none w-full"
+                autoFocus
+              />
+            ) : (
+              <h1
+                className="text-xl font-bold text-gray-900 cursor-pointer hover:text-blue-600 transition-colors"
+                onClick={() => setIsEditingName(true)}
+                title="Klik untuk mengedit nama template"
+              >
+                {templateName}
+              </h1>
+            )}
+            {isEditingDescription ? (
+              <input
+                type="text"
+                value={templateDescription}
+                onChange={(e) => setTemplateDescription(e.target.value)}
+                onBlur={() => setIsEditingDescription(false)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    setIsEditingDescription(false);
+                  }
+                  if (e.key === "Escape") {
+                    setIsEditingDescription(false);
+                  }
+                }}
+                className="text-sm text-gray-600 mt-1 bg-transparent border-b-2 border-blue-500 focus:outline-none w-full"
+                autoFocus
+              />
+            ) : (
+              <p
+                className="text-sm text-gray-600 mt-1 cursor-pointer hover:text-blue-600 transition-colors"
+                onClick={() => setIsEditingDescription(true)}
+                title="Klik untuk mengedit deskripsi template"
+              >
+                {templateDescription || "Klik untuk menambahkan deskripsi"}
+              </p>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <label className="flex items-center gap-2 text-sm text-gray-700">
@@ -848,6 +1154,13 @@ export default function EditorPage() {
               />
               <span>Safe Run</span>
             </label>
+            <button
+              onClick={() => setSaveTemplateDialogOpen(true)}
+              className="px-4 py-2 border border-[#e5e5e5] rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium flex items-center gap-2"
+            >
+              <Save className="w-4 h-4" />
+              Simpan Template
+            </button>
             <button
               onClick={() => setActivePanel(activePanel === "list" ? "preview" : "list")}
               className="px-4 py-2 border border-[#e5e5e5] rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium flex items-center gap-2"
@@ -921,15 +1234,15 @@ export default function EditorPage() {
                             Data Source
                           </button>
                         )}
-                        <button
+                <button
                           onClick={() => handleAddStep("action")}
                           className="px-4 py-3 border border-[#e5e5e5] rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium flex items-center gap-2"
                         >
                           <Plus className="w-4 h-4" />
                           Action
-                        </button>
+                </button>
                         {!steps.some((s) => s.type === "successIndicator") && (
-                          <button
+                <button
                             onClick={() => handleAddStep("successIndicator")}
                             className="px-4 py-3 border border-[#e5e5e5] rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium flex items-center gap-2"
                           >
@@ -955,9 +1268,9 @@ export default function EditorPage() {
                             Execution Settings
                           </button>
                         )}
-                      </div>
                     </div>
                   </div>
+              </div>
                 </SortableContext>
                 <DragOverlay>
                   {activeId && (
@@ -978,7 +1291,7 @@ export default function EditorPage() {
                   )}
                 </DragOverlay>
               </DndContext>
-            </div>
+        </div>
 
             {/* Step Editor Sidebar */}
             {selectedStep && (
@@ -1046,11 +1359,19 @@ export default function EditorPage() {
                   plan={generateAutomationPlan()}
                   isExecuting={isExecuting}
                 />
-              )}
-            </div>
+            )}
           </div>
-        )}
-      </div>
+        </div>
+      )}
+        </div>
+
+      {/* Save Template Dialog */}
+      <SaveTemplateDialog
+        isOpen={saveTemplateDialogOpen}
+        onClose={() => setSaveTemplateDialogOpen(false)}
+        onSave={handleSaveTemplate}
+        existingTemplateName={templateName}
+      />
     </div>
   );
 }
