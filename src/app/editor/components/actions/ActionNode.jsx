@@ -1,6 +1,7 @@
 "use client";
 
-import { Handle, Position } from "@xyflow/react";
+// Komponen ini tidak lagi digunakan setelah migrasi ke drag & drop list
+// Dibiarkan untuk referensi atau bisa dihapus jika tidak diperlukan
 
 // Constants untuk action types
 const ACTION_ICONS = {
@@ -55,13 +56,6 @@ export default function ActionNode({ data, selected }) {
           )}
         </div>
       </div>
-
-      <Handle type="target" position={Position.Top} className="!bg-blue-500" />
-      <Handle
-        type="source"
-        position={Position.Bottom}
-        className="!bg-blue-500"
-      />
     </div>
   );
 }

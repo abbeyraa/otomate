@@ -17,7 +17,9 @@
     "electron:build:linux": "npm run build && electron-builder --linux"
   },
   "dependencies": {
-    "@xyflow/react": "^12.10.0",
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
     "lucide-react": "^0.562.0",
     "next": "16.0.7",
     "papaparse": "^5.4.1",

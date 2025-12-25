@@ -1,7 +1,7 @@
 "use client";
 
-import { Handle, Position } from "@xyflow/react";
-
+// Komponen ini tidak lagi digunakan setelah migrasi ke drag & drop list
+// Dibiarkan untuk referensi atau bisa dihapus jika tidak diperlukan
 export default function AddDataSourceNode({ data, selected }) {
   return (
     <div

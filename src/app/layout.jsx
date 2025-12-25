@@ -1,6 +1,5 @@
 import { Poppins } from "next/font/google";
 import "./globals.css";
-import "@xyflow/react/dist/style.css";
 import Sidebar from "@/components/Sidebar";
 import EditorProviderWrapper from "@/components/EditorProviderWrapper";
 
@@ -26,3 +25,5 @@ export default function RootLayout({ children }) {
     </html>
   );
 }
+
+

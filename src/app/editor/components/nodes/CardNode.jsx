@@ -1,7 +1,7 @@
 "use client";
 
-import { Handle, Position } from "@xyflow/react";
-
+// Komponen ini tidak lagi digunakan setelah migrasi ke drag & drop list
+// Dibiarkan untuk referensi atau bisa dihapus jika tidak diperlukan
 export default function CardNode({ data, selected }) {
   return (
     <div
@@ -16,13 +16,6 @@ export default function CardNode({ data, selected }) {
       {data?.subtitle ? (
         <div className="mt-0.5 text-xs text-gray-500">{data.subtitle}</div>
       ) : null}
-
-      <Handle type="target" position={Position.Top} className="!bg-blue-500" />
-      <Handle
-        type="source"
-        position={Position.Bottom}
-        className="!bg-blue-500"
-      />
     </div>
   );
 }
