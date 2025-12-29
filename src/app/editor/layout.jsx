@@ -1,7 +1,7 @@
 export const metadata = {
-  title: "PrivyLens — Node Editor",
+  title: "OtoMate - Automation Editor",
   description:
-    "Editor node-based untuk merancang automation plan pengisian form berbasis browser.",
+    "Editor untuk merancang automation plan pengisian form berbasis browser.",
 };
 
 export default function EditorLayout({ children }) {
