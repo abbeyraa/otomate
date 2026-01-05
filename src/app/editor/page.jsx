@@ -71,6 +71,10 @@ export default function EditorPage() {
   const [loginUsername, setLoginUsername] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
   const [hasInspected, setHasInspected] = useState(false);
+  const [isInspecting, setIsInspecting] = useState(false);
+  const [logsOpen, setLogsOpen] = useState(false);
+  const [logsContent, setLogsContent] = useState("");
+  const [inspectError, setInspectError] = useState("");
 
   const selectedStepData =
     selectedStep.group === "access"
@@ -163,6 +167,42 @@ export default function EditorPage() {
     }
   };
 
+  const runInspect = async () => {
+    setIsInspecting(true);
+    setInspectError("");
+    setLogsOpen(false);
+    try {
+      const response = await fetch("/api/inspect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: targetUrl }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || "Inspect failed");
+      }
+      setHasInspected(true);
+    } catch (error) {
+      setInspectError(error.message || "Inspect failed");
+    } finally {
+      setIsInspecting(false);
+    }
+  };
+
+  const loadLogs = async () => {
+    try {
+      const response = await fetch("/api/inspect");
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || "Logs not available");
+      }
+      setLogsContent(JSON.stringify(data.data, null, 2));
+      setLogsOpen(true);
+    } catch (error) {
+      setInspectError(error.message || "Failed to load logs");
+    }
+  };
+
   return (
     <div className="h-full flex flex-col">
       <div className="flex-1 overflow-y-auto p-8">
@@ -178,16 +218,22 @@ export default function EditorPage() {
             </button>
             <button
               type="button"
-              onClick={() => setHasInspected(true)}
-              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium border border-[#e5e5e5] rounded-lg bg-white text-gray-700 hover:bg-gray-50"
+              onClick={runInspect}
+              disabled={isInspecting}
+              className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium border border-[#e5e5e5] rounded-lg ${
+                isInspecting
+                  ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                  : "bg-white text-gray-700 hover:bg-gray-50"
+              }`}
             >
-              Inspect
+              {isInspecting ? "Inspecting..." : "Inspect"}
             </button>
             <button
               type="button"
-              disabled={!hasInspected}
+              disabled={!hasInspected || isInspecting}
+              onClick={loadLogs}
               className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium border border-[#e5e5e5] rounded-lg ${
-                hasInspected
+                hasInspected && !isInspecting
                   ? "bg-white text-gray-700 hover:bg-gray-50"
                   : "bg-gray-100 text-gray-400 cursor-not-allowed"
               }`}
@@ -202,6 +248,34 @@ export default function EditorPage() {
               Jalankan
             </button>
           </div>
+          {inspectError && (
+            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {inspectError}
+            </div>
+          )}
+          {logsOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+              <div className="w-full max-w-3xl rounded-xl bg-white shadow-xl">
+                <div className="flex items-center justify-between border-b border-[#e5e5e5] px-5 py-4">
+                  <h3 className="text-sm font-semibold text-gray-900">
+                    Inspect Logs
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => setLogsOpen(false)}
+                    className="text-xs text-gray-500 hover:text-gray-700"
+                  >
+                    Close
+                  </button>
+                </div>
+                <div className="p-5">
+                  <pre className="max-h-[60vh] overflow-y-auto rounded-lg bg-gray-50 p-4 text-xs text-gray-700">
+                    {logsContent || "No logs yet."}
+                  </pre>
+                </div>
+              </div>
+            </div>
+          )}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <section className="bg-white border border-[#e5e5e5] rounded-lg overflow-hidden">
               <div className="px-6 py-4 border-b border-[#e5e5e5] flex items-center justify-between">
@@ -418,7 +492,7 @@ export default function EditorPage() {
             <section className="space-y-6">
               <div className="bg-white border border-[#e5e5e5] rounded-lg p-6">
                 <h2 className="text-base font-semibold text-gray-900">
-                  Target & Login
+                  Access
                 </h2>
                 <p className="text-xs text-gray-500 mt-1">
                   Informasi dasar yang selalu dibutuhkan
