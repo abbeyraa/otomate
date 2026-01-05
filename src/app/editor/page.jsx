@@ -245,6 +245,10 @@ function SortableStepCard({
 export default function EditorPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const templateId = useMemo(
+    () => searchParams.get("templateId"),
+    [searchParams]
+  );
 
   // State management
   const [expandedSteps, setExpandedSteps] = useState({});
@@ -310,86 +314,82 @@ export default function EditorPage() {
     })
   );
 
+  const loadTemplate = useCallback(
+    async (id) => {
+      if (!id) return;
+      const templates = await getTemplates();
+      const template = templates.find((t) => t.id === id);
+      if (template) {
+        setCurrentTemplateId(template.id);
+        setTemplateName(template.name);
+        setTemplateDescription(template.description || "");
+
+        // Load template plan
+        const activeVersion = template.versions?.find((v) => v.isActive);
+        if (activeVersion?.plan) {
+          const plan = activeVersion.plan;
+          if (plan.target) {
+            setTargetUrl(plan.target.url || "");
+            setPageReadyType(
+              plan.target.pageReadyIndicator?.type || "selector"
+            );
+            setPageReadyValue(plan.target.pageReadyIndicator?.value || "");
+            if (plan.target.login) {
+              setRequiresLogin(true);
+              setLoginUrl(plan.target.login.url || "");
+              setLoginUsername(plan.target.login.username || "");
+              setLoginPassword(plan.target.login.password || "");
+            }
+            if (plan.target.navigation) {
+              setNavigationSteps(plan.target.navigation || []);
+            }
+          }
+          if (plan.dataSource) {
+            setDataSourceType(plan.dataSource.type || "upload");
+            setRows(plan.dataSource.rows || []);
+            setDataMode(plan.dataSource.mode || "single");
+            setSelectedRowIndex(plan.dataSource.selectedRowIndex || 0);
+          }
+          if (plan.fieldMappings) {
+            setFieldMappings(plan.fieldMappings || []);
+          }
+          if (plan.actions) {
+            const actions = plan.actions.map((action, index) => ({
+              id: `action-${Date.now()}-${index}`,
+              type: "action",
+              position: { x: 60, y: 200 + index * 100 },
+              data: {
+                actionType: action.type,
+                actionTarget: action.target,
+                actionValue: action.value,
+                actionWaitFor: action.waitFor,
+              },
+            }));
+            setActionNodes(actions);
+          }
+          if (plan.successIndicator) {
+            setSuccessIndicator(plan.successIndicator);
+          }
+          if (plan.failureIndicator) {
+            setFailureIndicator(plan.failureIndicator);
+          }
+          if (plan.execution) {
+            setExecution(plan.execution);
+          }
+        }
+      }
+    },
+    [getTemplates]
+  );
+
   // Migrate and load template if templateId in URL
   useEffect(() => {
     // Migrate on mount (only runs once)
     migrateToFileStorage();
+    loadTemplate(templateId);
+  }, [loadTemplate, migrateToFileStorage, templateId]);
 
-    const loadTemplate = async () => {
-      const templateId = searchParams.get("templateId");
-      if (templateId) {
-        const templates = await getTemplates();
-        const template = templates.find((t) => t.id === templateId);
-        if (template) {
-          setCurrentTemplateId(template.id);
-          setTemplateName(template.name);
-          setTemplateDescription(template.description || "");
-
-          // Load template plan
-          const activeVersion = template.versions?.find((v) => v.isActive);
-          if (activeVersion?.plan) {
-            const plan = activeVersion.plan;
-            if (plan.target) {
-              setTargetUrl(plan.target.url || "");
-              setPageReadyType(
-                plan.target.pageReadyIndicator?.type || "selector"
-              );
-              setPageReadyValue(plan.target.pageReadyIndicator?.value || "");
-              if (plan.target.login) {
-                setRequiresLogin(true);
-                setLoginUrl(plan.target.login.url || "");
-                setLoginUsername(plan.target.login.username || "");
-                setLoginPassword(plan.target.login.password || "");
-              }
-              if (plan.target.navigation) {
-                setNavigationSteps(plan.target.navigation || []);
-              }
-            }
-            if (plan.dataSource) {
-              setDataSourceType(plan.dataSource.type || "upload");
-              setRows(plan.dataSource.rows || []);
-              setDataMode(plan.dataSource.mode || "single");
-              setSelectedRowIndex(plan.dataSource.selectedRowIndex || 0);
-            }
-            if (plan.fieldMappings) {
-              setFieldMappings(plan.fieldMappings || []);
-            }
-            if (plan.actions) {
-              const actions = plan.actions.map((action, index) => ({
-                id: `action-${Date.now()}-${index}`,
-                type: "action",
-                position: { x: 60, y: 200 + index * 100 },
-                data: {
-                  actionType: action.type,
-                  actionTarget: action.target,
-                  actionValue: action.value,
-                  actionWaitFor: action.waitFor,
-                },
-              }));
-              setActionNodes(actions);
-            }
-            if (plan.successIndicator) {
-              setSuccessIndicator(plan.successIndicator);
-            }
-            if (plan.failureIndicator) {
-              setFailureIndicator(plan.failureIndicator);
-            }
-            if (plan.execution) {
-              setExecution(plan.execution);
-            }
-          }
-          return; // Don't load editor state if template is loaded
-        }
-      }
-    };
-
-    loadTemplate();
-  }, [searchParams, getTemplates, migrateToFileStorage]);
-
-  // Load state on mount (only if no template loaded)
-  useEffect(() => {
-    if (currentTemplateId) return; // Skip if template is loaded
-
+  const loadSavedState = useCallback(() => {
     const savedState = loadEditorState();
     if (savedState) {
       setTargetUrl(savedState.targetUrl || "");
@@ -445,12 +445,34 @@ export default function EditorPage() {
         setActionNodes(actions);
       }
     }
-  }, [currentTemplateId, loadEditorState]);
+  }, [loadEditorState]);
+
+  // Load state on mount (only if no template loaded)
+  useEffect(() => {
+    if (currentTemplateId) return; // Skip if template is loaded
+    loadSavedState();
+  }, [currentTemplateId, loadSavedState]);
 
   // Convert state to steps whenever state changes
   const hasDataSourceNode = useMemo(
     () => rows.length > 0 || manualRows.length > 0,
     [rows, manualRows]
+  );
+
+  const serializedActionNodes = useMemo(
+    () =>
+      actionNodes.map((node) => ({
+        id: node.id,
+        type: "action",
+        position: node.position,
+        data: {
+          actionType: node.data.actionType,
+          actionTarget: node.data.actionTarget,
+          actionValue: node.data.actionValue,
+          actionWaitFor: node.data.actionWaitFor,
+        },
+      })),
+    [actionNodes]
   );
 
   const steps = useMemo(() => {
@@ -525,17 +547,7 @@ export default function EditorPage() {
         selectedSheet,
         selectedRowIndex,
         fieldMappings,
-        nodes: actionNodes.map((a) => ({
-          id: a.id,
-          type: "action",
-          position: a.position,
-          data: {
-            actionType: a.data.actionType,
-            actionTarget: a.data.actionTarget,
-            actionValue: a.data.actionValue,
-            actionWaitFor: a.data.actionWaitFor,
-          },
-        })),
+        nodes: serializedActionNodes,
         edges: [],
         successIndicator,
         failureIndicator,
@@ -562,7 +574,7 @@ export default function EditorPage() {
     selectedSheet,
     selectedRowIndex,
     fieldMappings,
-    actionNodes,
+    serializedActionNodes,
     successIndicator,
     failureIndicator,
     execution,
@@ -577,7 +589,7 @@ export default function EditorPage() {
     if (!autoSaveEnabled) return;
 
     const timeoutId = setTimeout(async () => {
-      const plan = generateAutomationPlan();
+      const plan = automationPlan;
       if (!plan.target?.url) return; // Don't save if invalid
 
       const templates = await getTemplates();
@@ -618,7 +630,7 @@ export default function EditorPage() {
     currentTemplateId,
     templateName,
     templateDescription,
-    generateAutomationPlan,
+    automationPlan,
     getSetting,
     getTemplates,
     saveTemplates,
@@ -821,23 +833,16 @@ export default function EditorPage() {
             fieldMappings: [],
             execution,
           }),
-      actions: actionNodes
-        .sort((a, b) => {
-          // Sort by position in steps array
-          const aIndex = steps.findIndex((s) => s.id === a.id);
-          const bIndex = steps.findIndex((s) => s.id === b.id);
-          return aIndex - bIndex;
-        })
-        .map((node) => ({
-          type: node.data.actionType,
-          target: node.data.actionTarget,
-          ...(node.data.actionValue !== undefined
-            ? { value: node.data.actionValue }
-            : {}),
-          ...(node.data.actionWaitFor
-            ? { waitFor: node.data.actionWaitFor }
-            : {}),
-        })),
+      actions: actionNodes.map((node) => ({
+        type: node.data.actionType,
+        target: node.data.actionTarget,
+        ...(node.data.actionValue !== undefined
+          ? { value: node.data.actionValue }
+          : {}),
+        ...(node.data.actionWaitFor
+          ? { waitFor: node.data.actionWaitFor }
+          : {}),
+      })),
       ...(successIndicator.value.trim()
         ? {
             successIndicator: {
@@ -874,14 +879,18 @@ export default function EditorPage() {
     fieldMappings,
     execution,
     actionNodes,
-    steps,
     successIndicator,
     failureIndicator,
   ]);
 
+  const automationPlan = useMemo(
+    () => generateAutomationPlan(),
+    [generateAutomationPlan]
+  );
+
   // Save template
   const handleSaveTemplate = async (templateData) => {
-    const plan = generateAutomationPlan();
+    const plan = automationPlan;
 
     // Validasi minimal
     if (!plan.target?.url) {
@@ -1006,7 +1015,7 @@ export default function EditorPage() {
 
     let plan = null;
     try {
-      plan = generateAutomationPlan();
+      plan = automationPlan;
       const report = await runAutomation(plan, safeRun);
       setExecutionReport(report);
 
@@ -1323,7 +1332,7 @@ export default function EditorPage() {
                 <ExecutionReport report={executionReport} />
               ) : (
                 <AutomationPlanPreview
-                  plan={generateAutomationPlan()}
+                  plan={automationPlan}
                   effectiveRows={effectiveRows}
                   isExecuting={isExecuting}
                 />
