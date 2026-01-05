@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import {
-  Home as HomeIcon,
   AlertTriangle,
   Search as SearchIcon,
   FilePlus,
@@ -64,21 +63,6 @@ export default function HomePage() {
 
   return (
     <div className="h-full flex flex-col">
-      {/* Header */}
-      <div className="px-8 py-6 border-b border-[#e5e5e5] bg-white">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-blue-50 rounded-lg">
-            <HomeIcon className="w-6 h-6 text-blue-600" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-            <p className="text-sm text-gray-600 mt-1">
-              Gambaran umum kondisi automasi OtoMate
-            </p>
-          </div>
-        </div>
-      </div>
-
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-8">
         <div className="max-w-7xl mx-auto space-y-8">

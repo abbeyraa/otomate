@@ -76,14 +76,6 @@ export default function SettingsPage() {
 
   return (
     <div className="h-full flex flex-col">
-      {/* Header */}
-      <div className="px-8 py-6 border-b border-[#e5e5e5] bg-white">
-        <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
-        <p className="text-sm text-gray-600 mt-1">
-          Kelola pengaturan aplikasi dan preferensi Anda
-        </p>
-      </div>
-
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-8">
         <div className="max-w-4xl mx-auto space-y-6">
