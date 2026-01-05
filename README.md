@@ -346,4 +346,571 @@ Aplikasi ini adalah proprietary software untuk penggunaan internal perusahaan.
 
 **OtoMate** — Automation Partner for Internal Operations
 
-*Mengotomatisasi dengan kontrol, observabilitas, dan akuntabilitas.*
+_Mengotomatisasi dengan kontrol, observabilitas, dan akuntabilitas._
+
+---
+
+## Documentation: TEMPLATE_STORAGE.md
+
+### Template Storage - JSON File Storage Implementation
+
+## 📋 Overview
+
+Template storage sekarang menggunakan **JSON file storage** yang disimpan di file system melalui Electron, dengan fallback ke localStorage untuk mode web.
+
+## 🗂️ Lokasi Penyimpanan
+
+### Electron (Desktop App)
+
+- **Windows**: `%APPDATA%/otomate/templates.json`
+- **macOS**: `~/Library/Application Support/otomate/templates.json`
+- **Linux**: `~/.config/otomate/templates.json`
+
+### Web Mode
+
+- Fallback ke `localStorage` dengan key `otomate_templates`
+
+## 🔧 Struktur Implementasi
+
+### 1. Electron Main Process
+
+- **File**: `electron/templateStorage.js`
+- **Fungsi**:
+  - `readTemplates()` - Membaca template dari file
+  - `writeTemplates(templates)` - Menulis template ke file
+  - `migrateFromLocalStorage(data)` - Migrasi dari localStorage
+  - `getStorageInfo()` - Info tentang storage
+
+### 2. IPC Handlers
+
+- **File**: `electron/main.js`
+- **Handlers**:
+  - `template-storage:read` - Read templates
+  - `template-storage:write` - Write templates
+  - `template-storage:migrate` - Migrate from localStorage
+  - `template-storage:info` - Get storage info
+
+### 3. Preload Script
+
+- **File**: `electron/preload.js`
+- **Exposed API**: `window.electronAPI.templateStorage`
+
+### 4. Frontend Service
+
+- **File**: `src/lib/templateStorage.js`
+- **Fungsi**:
+  - `getTemplates()` - Async read dengan auto-fallback
+  - `saveTemplates(templates)` - Async write dengan auto-fallback
+  - `migrateToFileStorage()` - Auto-migration on mount
+  - `getStorageInfo()` - Get storage information
+  - `isFileStorageAvailable()` - Check if Electron available
+
+## 🔄 Auto-Migration
+
+Migration dari localStorage ke file storage dilakukan otomatis:
+
+- **Trigger**: Saat aplikasi pertama kali dibuka setelah update
+- **Behavior**:
+  - Hanya migrasi sekali (flag: `otomate_migrated_to_file`)
+  - Tidak overwrite jika file sudah ada
+  - Data tetap ada di localStorage sebagai backup
+
+## 📝 Penggunaan
+
+### Di Component React
+
+```javascript
+import { getTemplates, saveTemplates } from "@/lib/templateStorage";
+
+// Read templates
+const templates = await getTemplates();
+
+// Save templates
+const success = await saveTemplates(templates);
+```
+
+### Auto-Migration
+
+```javascript
+import { migrateToFileStorage } from "@/lib/templateStorage";
+
+// Di useEffect on mount
+useEffect(() => {
+  migrateToFileStorage();
+}, []);
+```
+
+## ✅ Keuntungan
+
+1. **Persistensi**: Data tersimpan di file system, tidak hilang saat clear browser cache
+2. **Portabilitas**: File bisa di-copy/backup dengan mudah
+3. **Backward Compatible**: Fallback ke localStorage untuk web mode
+4. **Auto-Migration**: Migrasi otomatis tanpa kehilangan data
+5. **No Dependencies**: Tidak perlu install database library
+
+## 🔍 Debugging
+
+### Check Storage Info
+
+```javascript
+import { getStorageInfo } from "@/lib/templateStorage";
+
+const info = await getStorageInfo();
+console.log(info);
+// Output: { type: 'file', path: '...', size: 1234, templateCount: 5 }
+```
+
+### Manual File Access
+
+File JSON bisa dibuka langsung dengan text editor untuk:
+
+- Backup manual
+- Debugging struktur data
+- Manual editing (tidak disarankan)
+
+## ⚠️ Catatan Penting
+
+1. **File Format**: JSON dengan pretty formatting (2 spaces indent)
+2. **Error Handling**: Semua error di-handle dengan fallback ke localStorage
+3. **Concurrent Access**: File operations di-handle secara sequential oleh Electron IPC
+4. **Data Validation**: Template harus berupa array, invalid data akan di-reject
+
+## 🚀 Next Steps (Optional)
+
+Jika di masa depan perlu fitur lebih advanced:
+
+- **SQLite**: Untuk query kompleks dan indexing
+- **Encryption**: Untuk encrypt sensitive data (login credentials)
+- **Cloud Sync**: Sync ke cloud storage
+- **Version Control**: Git-like versioning untuk templates
+
+---
+
+## Documentation: ELECTRON_SETUP.md
+
+### Setup Electron untuk PrivyLens
+
+Aplikasi PrivyLens sekarang sudah dikonfigurasi untuk berjalan sebagai aplikasi desktop menggunakan Electron.
+
+## 📋 Prerequisites
+
+Pastikan Anda sudah menginstall:
+
+- Node.js (v18 atau lebih baru)
+- npm atau yarn
+
+## 🚀 Cara Menggunakan
+
+### Development Mode
+
+Jalankan aplikasi dalam mode development dengan hot-reload:
+
+```bash
+npm run electron:dev
+```
+
+Perintah ini akan:
+
+1. Menjalankan Next.js dev server di `http://localhost:3000`
+2. Membuka window Electron yang terhubung ke dev server
+3. DevTools akan otomatis terbuka untuk debugging
+
+### Build untuk Production
+
+#### Build untuk Windows:
+
+```bash
+npm run electron:build:win
+```
+
+#### Build untuk macOS:
+
+```bash
+npm run electron:build:mac
+```
+
+#### Build untuk Linux:
+
+```bash
+npm run electron:build:linux
+```
+
+#### Build untuk semua platform:
+
+```bash
+npm run electron:build
+```
+
+File hasil build akan berada di folder `dist/`.
+
+## 📁 Struktur File Electron
+
+```
+electron/
+├── main.js      # Main process Electron (entry point)
+└── preload.js   # Preload script untuk keamanan
+```
+
+## ⚙️ Konfigurasi
+
+### Package.json Scripts
+
+- `electron:dev` - Development mode dengan hot-reload
+- `electron:build` - Build untuk semua platform
+- `electron:build:win` - Build khusus Windows
+- `electron:build:mac` - Build khusus macOS
+- `electron:build:linux` - Build khusus Linux
+
+### Electron Builder Config
+
+Konfigurasi electron-builder ada di `package.json` bagian `build`:
+
+- **App ID**: `com.privylens.app`
+- **Product Name**: `PrivyLens`
+- **Output Directory**: `dist/`
+
+## 🔧 Troubleshooting
+
+### Port 3000 sudah digunakan
+
+Jika port 3000 sudah digunakan, ubah variabel `PORT` di `electron/main.js` atau set environment variable:
+
+```bash
+PORT=3001 npm run electron:dev
+```
+
+### Build gagal
+
+Pastikan:
+
+1. Next.js build berhasil: `npm run build`
+2. Folder `.next/standalone` ada setelah build
+3. Semua dependencies terinstall: `npm install`
+
+### Window tidak muncul
+
+- Periksa console untuk error messages
+- Pastikan Next.js server berjalan dengan benar
+- Cek apakah port yang digunakan tidak blocked
+
+## 📝 Catatan Penting
+
+1. **Standalone Output**: Next.js dikonfigurasi untuk menghasilkan standalone output yang diperlukan untuk Electron
+2. **Images Unoptimized**: Images di Next.js di-set unoptimized untuk kompatibilitas dengan Electron
+3. **Security**: Electron menggunakan context isolation dan node integration disabled untuk keamanan
+
+## 🎯 Next Steps
+
+Setelah build berhasil, Anda bisa:
+
+- Distribusikan file installer dari folder `dist/`
+- Sign aplikasi untuk distribusi (opsional)
+- Update icon dan metadata sesuai kebutuhan
+
+---
+
+## Documentation: FAILURE_INTELLIGENCE.md
+
+### Failure Intelligence & Assisted Repair Mode
+
+## Overview
+
+Sistem ini mengubah kegagalan automation dari error mentah menjadi informasi terstruktur yang dapat dipahami, diperbaiki, dan dilanjutkan tanpa mengulang proses dari awal.
+
+## Failure Intelligence
+
+### Klasifikasi Kegagalan
+
+Sistem mengklasifikasikan kegagalan ke dalam kategori berikut:
+
+1. **Selector Change** - Selector element tidak ditemukan atau berubah
+2. **Label Change** - Label atau teks field tidak ditemukan
+3. **Form Validation** - Validasi form gagal atau data tidak valid
+4. **Session Expired** - Sesi login telah kadaluarsa
+5. **Timing Issue** - Masalah timing atau delay yang tidak cukup
+6. **Page Loading** - Halaman membutuhkan waktu loading lebih lama
+7. **UI Change** - Perubahan UI atau elemen tidak terlihat
+8. **Network Error** - Masalah koneksi jaringan atau server
+9. **Element Not Found** - Elemen tidak ditemukan
+10. **Action Failed** - Action gagal dieksekusi
+11. **Unknown** - Kegagalan tidak dapat diklasifikasikan
+
+### Metadata Kegagalan
+
+Setiap kegagalan menyimpan metadata terstruktur:
+
+- Error message dan stack trace
+- Klasifikasi dengan confidence level
+- Context eksekusi (row index, action index, field, dll.)
+- Metadata browser dan viewport
+
+### Rekomendasi Perbaikan
+
+Sistem menghasilkan rekomendasi praktis berdasarkan klasifikasi:
+
+- Langkah-langkah perbaikan spesifik
+- Prioritas (critical, high, medium, low)
+- Action yang disarankan (check_label, add_fallback, dll.)
+
+### Execution Report dengan Intelligence
+
+Report menampilkan:
+
+- Analisis pola kegagalan (frekuensi kategori)
+- Rekomendasi perbaikan untuk setiap kegagalan
+- User-friendly messages (bukan error teknis)
+- Summary dengan distribusi kegagalan
+
+## Assisted Repair Mode
+
+### Fitur
+
+1. **Pause on Failure** - Automation pause saat terjadi kegagalan
+2. **Browser State Preservation** - Browser tetap terbuka di state terakhir
+3. **Manual Repair** - User dapat melakukan perbaikan manual di browser
+4. **Resume Options**:
+   - **Continue** - Lanjutkan ke baris berikutnya (skip row saat ini)
+   - **Retry** - Ulangi action yang gagal
+   - **Skip Row** - Skip baris saat ini
+   - **Abort** - Hentikan batch
+
+### State Management
+
+Execution state disimpan untuk recovery deterministik:
+
+- Row index dan action index
+- Data row yang sedang diproses
+- Page URL dan state
+- Failure metadata
+
+### UI Components
+
+- **AssistedRepairDialog** - Dialog untuk memilih tindakan perbaikan
+- Toggle "Assisted Repair" di editor
+- Informasi kegagalan dengan rekomendasi
+- Progress indicator
+
+## Implementasi
+
+### Files
+
+1. `src/lib/failureIntelligence.js` - Sistem klasifikasi dan analisis
+2. `src/lib/assistedRepair.js` - State management untuk repair mode
+3. `src/app/editor/components/execution/IntelligentExecutionReport.jsx` - Report dengan intelligence
+4. `src/app/editor/components/execution/AssistedRepairDialog.jsx` - UI untuk repair mode
+5. `src/lib/playwright-runner/actions.js` - Integrasi failure intelligence ke runner
+
+### Integrasi
+
+Failure Intelligence terintegrasi di:
+
+- `executeAction()` - Menangkap error dan membuat metadata
+- `executeActionsForRow()` - Menyertakan context untuk klasifikasi
+- Execution report - Menampilkan intelligence dan rekomendasi
+
+## Usage
+
+### Mengaktifkan Assisted Repair Mode
+
+1. Centang checkbox "Assisted Repair" di editor
+2. Jalankan automation plan
+3. Saat terjadi kegagalan, dialog akan muncul
+4. Browser tetap terbuka untuk perbaikan manual
+5. Pilih tindakan perbaikan dan klik "Terapkan"
+
+### Melihat Intelligence Report
+
+1. Setelah execution selesai, buka panel "Preview & Report"
+2. Report menampilkan:
+   - Analisis pola kegagalan
+   - Rekomendasi perbaikan untuk setiap kegagalan
+   - User-friendly messages
+
+## Catatan Implementasi
+
+**Assisted Repair Mode dengan Pause/Resume Real-time**:
+
+- Implementasi saat ini menyediakan UI dan struktur dasar
+- Untuk pause/resume real-time, diperlukan komunikasi WebSocket atau polling antara client dan server-side runner
+- Browser state preservation memerlukan modifikasi runner untuk tidak menutup browser saat failure
+- Resume logic memerlukan mekanisme untuk melanjutkan dari state yang disimpan
+
+**Future Enhancements**:
+
+- WebSocket connection untuk real-time communication
+- Browser state persistence across repair sessions
+- Automatic retry dengan exponential backoff
+- Historical failure analysis dashboard
+- Auto-fix suggestions berdasarkan pattern learning
+
+---
+
+## Documentation: INSPECTOR_GUIDE.md
+
+### Interactive Automation Inspector Guide
+
+## Overview
+
+Interactive Automation Inspector adalah fitur yang memungkinkan pengguna mengamati dan memahami proses interaksi halaman web sebelum menyusun Automation Plan. Fitur ini membantu mengidentifikasi langkah-langkah yang diperlukan dalam automasi tanpa harus menebak atau melakukan trial and error.
+
+## Fitur Utama
+
+### 1. Browser Preview dengan Observasi
+
+- Membuka halaman target dalam browser nyata (Playwright)
+- Mode observasi tanpa eksekusi automasi
+- Browser tetap terbuka untuk interaksi manual
+- Real-time monitoring perubahan halaman
+
+### 2. Process Timeline
+
+- Menampilkan events secara kronologis
+- Real-time update saat events terjadi
+- Filter untuk menampilkan hanya events penting
+- Visual timeline dengan icon dan color coding
+
+### 3. Event Recording
+
+Sistem mencatat berbagai jenis events:
+
+- **Navigation** - Perubahan URL
+- **Loading** - Status loading halaman
+- **Network Idle** - Tidak ada request network aktif
+- **Element Appear/Disappear** - Kemunculan/hilangnya elemen UI
+- **Click** - Klik pengguna
+- **Input** - Input data ke field
+- **Submit** - Submit form
+- **Modal/Toast** - Kemunculan modal atau toast notification
+- **Spinner** - Loading spinner
+
+### 4. Event Management
+
+- **Select Events** - Pilih events untuk dijadikan action flow
+- **Mark as Important** - Tandai events penting
+- **Filter** - Tampilkan hanya events penting
+- **View Details** - Lihat detail setiap event
+
+### 5. Action Flow Generation
+
+- Generate draft action flow dari selected events
+- Konversi otomatis events ke actions:
+  - Navigation → navigate action
+  - Click → click action
+  - Input → fill action
+  - Network Idle/Element Appear → wait action
+- Export ke Editor untuk editing lebih lanjut
+
+### 6. Draft Management
+
+- **Save Draft** - Simpan events dan selections
+- **Load Draft** - Muat draft yang sudah disimpan
+- **Import to Editor** - Import langsung ke Automation Plan editor
+
+## Cara Menggunakan
+
+### 1. Membuka Inspector
+
+1. Klik menu "Inspector" di sidebar
+2. Masukkan URL target di input field
+3. Klik "Mulai Inspection"
+
+### 2. Mengamati Halaman
+
+- Browser Playwright akan terbuka dengan halaman target
+- Interaksi manual di browser akan direkam sebagai events
+- Events muncul secara real-time di timeline
+
+### 3. Menandai Events Penting
+
+- Klik icon check/cross di event card untuk menandai sebagai penting
+- Gunakan filter "Hanya penting" untuk menyederhanakan view
+
+### 4. Memilih Events untuk Action Flow
+
+- Klik event card untuk memilih/deselect
+- Selected events akan ditandai dengan border biru
+- Pilih minimal satu event untuk generate action flow
+
+### 5. Generate Action Flow
+
+1. Pilih events yang ingin dijadikan actions
+2. Klik "Generate Action Flow"
+3. Pilih:
+   - **OK** - Buka di Editor untuk editing
+   - **Cancel** - Copy ke clipboard
+
+### 6. Import ke Editor
+
+- Jika memilih "OK", akan diarahkan ke Editor
+- Actions akan otomatis ditambahkan ke canvas
+- Actions dapat diedit seperti biasa
+
+## Event Types dan Konversi
+
+| Event Type     | Konversi ke Action | Keterangan                       |
+| -------------- | ------------------ | -------------------------------- |
+| Navigation     | `navigate`         | Navigate ke URL                  |
+| Click          | `click`            | Click element                    |
+| Input          | `fill`             | Fill field (perlu field mapping) |
+| Network Idle   | `wait`             | Wait for network idle            |
+| Element Appear | `wait`             | Wait for element dengan selector |
+| Submit         | `click`            | Click submit button              |
+
+## Tips Penggunaan
+
+1. **Mulai dengan URL Target**
+
+   - Pastikan URL target valid dan dapat diakses
+   - Gunakan URL lengkap dengan protocol (https://)
+
+2. **Tandai Events Penting**
+
+   - Tandai events yang kritis untuk automasi
+   - Contoh: Network Idle, Element Appear untuk form
+
+3. **Pilih Events Secara Selektif**
+
+   - Tidak semua events perlu dijadikan actions
+   - Pilih events yang relevan dengan flow automasi
+
+4. **Review di Editor**
+
+   - Actions yang diimport perlu direview dan disesuaikan
+   - Tambahkan field mappings untuk fill actions
+   - Sesuaikan selectors jika perlu
+
+5. **Save Draft**
+   - Simpan draft jika ingin melanjutkan nanti
+   - Berguna untuk iterasi dan perbaikan
+
+## Integrasi dengan Editor
+
+Actions yang diimport dari Inspector:
+
+- Otomatis ditambahkan sebagai action nodes di canvas
+- Terhubung secara sequential
+- Dapat diedit seperti actions biasa
+- Target URL otomatis diisi jika tersedia
+
+## Catatan Implementasi
+
+**Browser Preview**:
+
+- Saat ini menggunakan placeholder UI
+- Untuk implementasi penuh, diperlukan integrasi dengan Playwright browser instance
+- Browser harus tetap terbuka selama inspection
+
+**Event Recording**:
+
+- `inspectorRecorder.js` menyediakan fungsi untuk setup listeners
+- Real-time events memerlukan WebSocket atau polling mechanism
+- Saat ini menggunakan simulasi events untuk demo
+
+**Future Enhancements**:
+
+- Real-time browser preview dengan iframe atau screenshot
+- WebSocket connection untuk real-time events
+- Screenshot capture untuk setiap event
+- Video recording dari inspection session
+- Auto-detect form fields dan generate field mappings
+- Smart recommendations berdasarkan event patterns
