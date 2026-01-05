@@ -13,6 +13,7 @@ import {
   XCircle,
   AlertCircle,
 } from "lucide-react";
+import Image from "next/image";
 
 export default function SandboxPage() {
   const [url, setUrl] = useState("");
@@ -22,18 +23,18 @@ export default function SandboxPage() {
 // Contoh script:
 const actions = [
   {
-    type: 'click',
-    selector: 'button.submit',
-    options: { timeout: 5000 }
+    "type": "click",
+    "selector": "button.submit",
+    "options": { "timeout": 5000 }
   },
   {
-    type: 'fill',
-    selector: 'input[name="email"]',
-    value: 'test@example.com'
+    "type": "fill",
+    "selector": "input[name=\\"email\\"]",
+    "value": "test@example.com"
   },
   {
-    type: 'getText',
-    selector: 'h1.title'
+    "type": "getText",
+    "selector": "h1.title"
   }
 ];`);
   const [isRunning, setIsRunning] = useState(false);
@@ -51,22 +52,19 @@ const actions = [
     setResult(null);
 
     try {
-      // Parse script untuk mendapatkan actions
+      // Parse script untuk mendapatkan actions (JSON array)
       let actions = [];
       try {
-        // Extract actions dari script (simple parsing)
         const actionsMatch = script.match(/const\s+actions\s*=\s*(\[[\s\S]*?\]);/);
-        if (actionsMatch) {
-          actions = eval(`(${actionsMatch[1]})`);
-        } else {
-          // Try to evaluate entire script
-          const scriptResult = eval(script);
-          if (Array.isArray(scriptResult)) {
-            actions = scriptResult;
-          }
+        const raw = actionsMatch ? actionsMatch[1] : script.trim();
+        actions = JSON.parse(raw);
+        if (!Array.isArray(actions)) {
+          throw new Error("Actions harus berupa array JSON");
         }
       } catch (parseError) {
-        throw new Error(`Error parsing script: ${parseError.message}`);
+        throw new Error(
+          `Error parsing script: ${parseError.message}. Gunakan format JSON array.`
+        );
       }
 
       // Call API to execute sandbox
@@ -339,9 +337,12 @@ const actions = [];`);
                   <div>
                     <h3 className="text-sm font-semibold text-gray-900 mb-3">Screenshot</h3>
                     <div className="border border-[#e5e5e5] rounded-lg overflow-hidden">
-                      <img
+                      <Image
                         src={`data:image/png;base64,${result.screenshot}`}
                         alt="Screenshot"
+                        width={800}
+                        height={450}
+                        unoptimized
                         className="w-full h-auto"
                       />
                     </div>

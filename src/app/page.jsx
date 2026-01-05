@@ -3,69 +3,32 @@
 import { useState, useEffect } from "react";
 import {
   Home as HomeIcon,
-  FileText,
-  PlayCircle,
-  CheckCircle2,
-  XCircle,
   AlertTriangle,
-  Clock,
-  TrendingUp,
   Search as SearchIcon,
-  ArrowRight,
   FilePlus,
+  FolderOpen,
+  FileText,
+  Code,
 } from "lucide-react";
 import Link from "next/link";
-import { getExecutionLogs } from "@/lib/sessionStorage";
-import { migrateToFileStorage } from "@/lib/templateStorage";
+import { getTemplates } from "@/lib/templateStorage";
 
 export default function HomePage() {
-  const getStoredTemplates = () => {
-    if (typeof window === "undefined") return [];
-    try {
-      const stored = localStorage.getItem("otomate_templates");
-      return stored ? JSON.parse(stored) : [];
-    } catch (error) {
-      console.error("Failed to load templates from localStorage:", error);
-      return [];
-    }
-  };
-
-  const getStoredExecutions = () => getExecutionLogs();
-
-  const calculateStats = (templates, logs) => {
+  const calculateStats = (templates) => {
     const activeTemplates = templates.filter((t) => t.isActive !== false);
     const totalTemplates = activeTemplates.length;
-    const totalExecutions = logs.length;
-    const successful = logs.filter(
-      (log) => log.report?.status === "success"
-    ).length;
-    const successRate =
-      totalExecutions > 0
-        ? Math.round((successful / totalExecutions) * 100)
-        : 0;
-
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    const recentFailures = logs.filter((log) => {
-      const logDate = new Date(log.timestamp);
-      return (
-        logDate >= sevenDaysAgo &&
-        (log.report?.status === "failed" || log.report?.status === "error")
-      );
-    }).length;
+    const totalSaved = templates.length;
+    const inactiveTemplates = Math.max(totalSaved - totalTemplates, 0);
 
     return {
       totalTemplates,
-      totalExecutions,
-      successRate,
-      recentFailures,
+      totalSaved,
+      inactiveTemplates,
     };
   };
 
-  const [executions] = useState(() => getStoredExecutions());
-  const [stats] = useState(() =>
-    calculateStats(getStoredTemplates(), getStoredExecutions())
-  );
+  const [templates, setTemplates] = useState([]);
+  const [stats, setStats] = useState(() => calculateStats([]));
 
   const formatDate = (timestamp) => {
     return new Date(timestamp).toLocaleString("id-ID", {
@@ -76,70 +39,8 @@ export default function HomePage() {
     });
   };
 
-  const getStatusIcon = (status) => {
-    switch (status) {
-      case "success":
-        return <CheckCircle2 className="w-4 h-4 text-green-600" />;
-      case "failed":
-      case "error":
-        return <XCircle className="w-4 h-4 text-red-600" />;
-      case "partial":
-        return <AlertTriangle className="w-4 h-4 text-yellow-600" />;
-      default:
-        return <Clock className="w-4 h-4 text-gray-600" />;
-    }
-  };
-
-  const getStatusLabel = (status) => {
-    switch (status) {
-      case "success":
-        return "Berhasil";
-      case "failed":
-      case "error":
-        return "Gagal";
-      case "partial":
-        return "Sebagian";
-      default:
-        return "Tidak Diketahui";
-    }
-  };
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case "success":
-        return "text-green-600 bg-green-50";
-      case "failed":
-      case "error":
-        return "text-red-600 bg-red-50";
-      case "partial":
-        return "text-yellow-600 bg-yellow-50";
-      default:
-        return "text-gray-600 bg-gray-50";
-    }
-  };
-
-  // Get recent executions (last 5)
-  const recentExecutions = executions.slice(0, 5);
-
-  // Get alerts (recent failures and warnings)
+  // Get alerts (template warnings)
   const alerts = [];
-  const recentFailures = executions
-    .filter(
-      (log) => log.report?.status === "failed" || log.report?.status === "error"
-    )
-    .slice(0, 3);
-
-  recentFailures.forEach((log) => {
-    alerts.push({
-      type: "error",
-      title: "Eksekusi Gagal",
-      message: `${
-        log.plan?.templateName || "Manual Execution"
-      } gagal dieksekusi`,
-      timestamp: log.timestamp,
-      id: log.id,
-    });
-  });
 
   // Add template update warnings (mock for now)
   if (stats.totalTemplates > 0) {
@@ -152,7 +53,13 @@ export default function HomePage() {
   }
 
   useEffect(() => {
-    migrateToFileStorage();
+    const loadTemplates = async () => {
+      const storedTemplates = await getTemplates();
+      setTemplates(storedTemplates);
+      setStats(calculateStats(storedTemplates));
+    };
+
+    loadTemplates();
   }, []);
 
   return (
@@ -178,9 +85,9 @@ export default function HomePage() {
           {/* Overview - Status Ringkas */}
           <section>
             <h2 className="text-lg font-semibold text-gray-900 mb-4">
-              Overview
+              Ringkasan Template
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Total Templates */}
               <div className="bg-white border border-[#e5e5e5] rounded-lg p-6">
                 <div className="flex items-center justify-between">
@@ -194,65 +101,27 @@ export default function HomePage() {
                     </p>
                   </div>
                   <div className="p-3 bg-blue-50 rounded-lg">
-                    <FileText className="w-6 h-6 text-blue-600" />
+                    <FolderOpen className="w-6 h-6 text-blue-600" />
                   </div>
                 </div>
               </div>
 
-              {/* Total Executions */}
-              <div className="bg-white border border-[#e5e5e5] rounded-lg p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-600 mb-1">Total Eksekusi</p>
-                    <p className="text-3xl font-bold text-gray-900">
-                      {stats.totalExecutions}
-                    </p>
-                    <p className="text-xs text-gray-500 mt-1">Semua waktu</p>
-                  </div>
-                  <div className="p-3 bg-green-50 rounded-lg">
-                    <PlayCircle className="w-6 h-6 text-green-600" />
-                  </div>
-                </div>
-              </div>
-
-              {/* Success Rate */}
+              {/* Inactive Templates */}
               <div className="bg-white border border-[#e5e5e5] rounded-lg p-6">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-gray-600 mb-1">
-                      Tingkat Keberhasilan
+                      Template Nonaktif
                     </p>
                     <p className="text-3xl font-bold text-gray-900">
-                      {stats.successRate}%
+                      {stats.inactiveTemplates}
                     </p>
                     <p className="text-xs text-gray-500 mt-1">
-                      {stats.totalExecutions > 0
-                        ? "Dari semua eksekusi"
-                        : "Belum ada data"}
+                      Dari {stats.totalSaved} template
                     </p>
                   </div>
-                  <div className="p-3 bg-purple-50 rounded-lg">
-                    <TrendingUp className="w-6 h-6 text-purple-600" />
-                  </div>
-                </div>
-              </div>
-
-              {/* Recent Failures */}
-              <div className="bg-white border border-[#e5e5e5] rounded-lg p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-600 mb-1">
-                      Kegagalan Terbaru
-                    </p>
-                    <p className="text-3xl font-bold text-gray-900">
-                      {stats.recentFailures}
-                    </p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      7 hari terakhir
-                    </p>
-                  </div>
-                  <div className="p-3 bg-red-50 rounded-lg">
-                    <AlertTriangle className="w-6 h-6 text-red-600" />
+                  <div className="p-3 bg-gray-100 rounded-lg">
+                    <FileText className="w-6 h-6 text-gray-600" />
                   </div>
                 </div>
               </div>
@@ -261,96 +130,82 @@ export default function HomePage() {
 
           {/* Two Column Layout */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Recent Executions - Left Column (2/3) */}
+            {/* Quick Actions - Left Column (2/3) */}
             <div className="lg:col-span-2 space-y-8">
-              {/* Recent Executions */}
               <section>
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-lg font-semibold text-gray-900">
-                    Recent Executions
+                    Saved Templates
                   </h2>
                   <Link
-                    href="/executions"
-                    className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"
+                    href="/templates"
+                    className="text-sm text-blue-600 hover:text-blue-700"
                   >
                     Lihat Semua
-                    <ArrowRight className="w-4 h-4" />
                   </Link>
                 </div>
                 <div className="bg-white border border-[#e5e5e5] rounded-lg">
-                  {recentExecutions.length === 0 ? (
-                    <div className="p-12 text-center">
-                      <PlayCircle className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                      <p className="text-gray-600 mb-2">Belum ada eksekusi</p>
-                      <p className="text-sm text-gray-500 mb-4">
-                        Mulai dengan menjalankan automation plan pertama Anda
+                  {templates.length === 0 ? (
+                    <div className="p-8 text-center">
+                      <FolderOpen className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+                      <p className="text-sm text-gray-600 mb-2">
+                        Belum ada template tersimpan
                       </p>
                       <Link
-                        href="/templates"
-                        className="inline-block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                        href="/editor"
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
                       >
-                        Buat Template
+                        <Code className="w-4 h-4" />
+                        Mulai dari Editor
                       </Link>
                     </div>
                   ) : (
                     <div className="divide-y divide-[#e5e5e5]">
-                      {recentExecutions.map((execution) => (
-                        <Link
-                          key={execution.id}
-                          href="/executions"
-                          className="block p-4 hover:bg-gray-50 transition-colors"
-                        >
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3 flex-1">
-                              {getStatusIcon(
-                                execution.report?.status || "unknown"
-                              )}
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <p className="font-medium text-gray-900 truncate">
-                                    {execution.plan?.templateName ||
-                                      execution.plan?.target?.url ||
-                                      "Manual Execution"}
-                                  </p>
-                                  <span
-                                    className={`px-2 py-0.5 rounded text-xs font-medium ${getStatusColor(
-                                      execution.report?.status || "unknown"
-                                    )}`}
-                                  >
-                                    {getStatusLabel(
-                                      execution.report?.status || "unknown"
-                                    )}
-                                  </span>
-                                </div>
-                                <div className="flex items-center gap-4 text-sm text-gray-600">
-                                  <span>{formatDate(execution.timestamp)}</span>
-                                  {execution.report?.summary && (
-                                    <>
-                                      <span>
-                                        {execution.report.summary.success || 0}{" "}
-                                        berhasil
-                                      </span>
-                                      {execution.report.summary.failed > 0 && (
-                                        <span className="text-red-600">
-                                          {execution.report.summary.failed}{" "}
-                                          gagal
-                                        </span>
-                                      )}
-                                    </>
-                                  )}
-                                </div>
-                              </div>
+                      {templates.slice(0, 5).map((template, index) => {
+                        const name =
+                          template.name ||
+                          template.templateName ||
+                          template.title ||
+                          `Template ${index + 1}`;
+                        const isActive = template.isActive !== false;
+                        const updatedAt =
+                          template.updatedAt ||
+                          template.updated_at ||
+                          template.savedAt ||
+                          template.createdAt;
+
+                        return (
+                          <div
+                            key={`${name}-${index}`}
+                            className="flex items-center justify-between gap-4 px-5 py-4"
+                          >
+                            <div>
+                              <p className="text-sm font-semibold text-gray-900">
+                                {name}
+                              </p>
+                              <p className="text-xs text-gray-500 mt-1">
+                                {updatedAt
+                                  ? `Terakhir disimpan ${formatDate(updatedAt)}`
+                                  : "Belum ada waktu penyimpanan"}
+                              </p>
                             </div>
-                            <ArrowRight className="w-5 h-5 text-gray-400 shrink-0" />
+                            <span
+                              className={`text-[11px] px-2 py-1 rounded-full font-medium ${
+                                isActive
+                                  ? "bg-green-50 text-green-700"
+                                  : "bg-gray-100 text-gray-600"
+                              }`}
+                            >
+                              {isActive ? "Aktif" : "Nonaktif"}
+                            </span>
                           </div>
-                        </Link>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>
               </section>
 
-              {/* Quick Actions */}
               <section>
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">
                   Quick Actions
@@ -371,6 +226,25 @@ export default function HomePage() {
                         <p className="text-sm text-gray-600">
                           Rancang automation plan baru untuk proses yang
                           berulang
+                        </p>
+                      </div>
+                    </div>
+                  </Link>
+
+                  <Link
+                    href="/editor"
+                    className="bg-white border border-[#e5e5e5] rounded-lg p-6 hover:shadow-md transition-all cursor-pointer group"
+                  >
+                    <div className="flex items-start gap-4">
+                      <div className="p-3 bg-purple-50 rounded-lg group-hover:bg-purple-100 transition-colors">
+                        <Code className="w-6 h-6 text-purple-600" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-gray-900 mb-1">
+                          Buka Editor
+                        </h3>
+                        <p className="text-sm text-gray-600">
+                          Mulai dari draft atau edit template yang ada
                         </p>
                       </div>
                     </div>
@@ -407,7 +281,7 @@ export default function HomePage() {
                 <div className="bg-white border border-[#e5e5e5] rounded-lg">
                   {alerts.length === 0 ? (
                     <div className="p-8 text-center">
-                      <CheckCircle2 className="w-12 h-12 text-green-300 mx-auto mb-4" />
+                      <AlertTriangle className="w-12 h-12 text-blue-300 mx-auto mb-4" />
                       <p className="text-sm text-gray-600 mb-1">
                         Tidak ada peringatan
                       </p>
@@ -420,35 +294,15 @@ export default function HomePage() {
                       {alerts.map((alert, index) => (
                         <div
                           key={index}
-                          className={`p-4 ${
-                            alert.type === "error"
-                              ? "bg-red-50 border-l-4 border-red-500"
-                              : "bg-yellow-50 border-l-4 border-yellow-500"
-                          }`}
+                          className="p-4 bg-yellow-50 border-l-4 border-yellow-500"
                         >
                           <div className="flex items-start gap-3">
-                            {alert.type === "error" ? (
-                              <XCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
-                            ) : (
-                              <AlertTriangle className="w-5 h-5 text-yellow-600 shrink-0 mt-0.5" />
-                            )}
+                            <AlertTriangle className="w-5 h-5 text-yellow-600 shrink-0 mt-0.5" />
                             <div className="flex-1 min-w-0">
-                              <h4
-                                className={`font-medium mb-1 ${
-                                  alert.type === "error"
-                                    ? "text-red-900"
-                                    : "text-yellow-900"
-                                }`}
-                              >
+                              <h4 className="font-medium mb-1 text-yellow-900">
                                 {alert.title}
                               </h4>
-                              <p
-                                className={`text-sm mb-2 ${
-                                  alert.type === "error"
-                                    ? "text-red-700"
-                                    : "text-yellow-700"
-                                }`}
-                              >
+                              <p className="text-sm mb-2 text-yellow-700">
                                 {alert.message}
                               </p>
                               <p className="text-xs text-gray-500">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Play,
   Square,
@@ -132,7 +132,7 @@ export default function InspectorPage() {
   };
 
   // Stop screenshot polling
-  const stopScreenshotPolling = () => {
+  const stopScreenshotPolling = useCallback(() => {
     if (screenshotIntervalRef.current) {
       clearInterval(screenshotIntervalRef.current);
       screenshotIntervalRef.current = null;
@@ -141,7 +141,7 @@ export default function InspectorPage() {
       URL.revokeObjectURL(screenshotUrl);
       setScreenshotUrl(null);
     }
-  };
+  }, [screenshotUrl]);
 
   // Stop inspection
   const handleStopInspection = async () => {
@@ -178,7 +178,7 @@ export default function InspectorPage() {
         });
       }
     };
-  }, [sessionId]);
+  }, [sessionId, stopScreenshotPolling]);
 
   // Simulate browser events (placeholder - akan diganti dengan real Playwright integration)
   const simulateBrowserEvents = () => {
@@ -491,7 +491,7 @@ export default function InspectorPage() {
               <div className="h-full flex items-center justify-center">
                 <div className="text-center text-gray-400">
                   <EyeOff className="w-16 h-16 mx-auto mb-4" />
-                  <p>Masukkan URL dan klik "Mulai Inspection"</p>
+                  <p>Masukkan URL dan klik &quot;Mulai Inspection&quot;</p>
                 </div>
               </div>
             )}

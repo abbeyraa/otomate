@@ -2,7 +2,7 @@
 
 ## Tentang OtoMate
 
-OtoMate adalah platform automasi web berbasis **Playwright** dan **Electron** yang dirancang khusus untuk penggunaan internal kantor dan developer. Aplikasi ini menyediakan sistem automasi yang terkontrol, dapat diamati, dan dapat dipertanggungjawabkan untuk mendukung operasional harian yang efisien dan andal.
+OtoMate adalah platform automasi web berbasis **Playwright** yang dirancang khusus untuk penggunaan internal kantor dan developer. Aplikasi ini menyediakan sistem automasi yang terkontrol, dapat diamati, dan dapat dipertanggungjawabkan untuk mendukung operasional harian yang efisien dan andal.
 
 OtoMate bukan sekadar alat otomatisasi klik, melainkan solusi automasi yang komprehensif dengan pendekatan terstruktur untuk merancang, menjalankan, dan memelihara proses automasi web dalam lingkungan kerja yang nyata.
 
@@ -122,7 +122,6 @@ OtoMate dibangun dengan teknologi modern untuk memastikan keandalan dan performa
 - **Frontend**: Next.js (App Router) dengan React untuk UI yang responsif dan interaktif
 - **Node-based Editor**: Menggunakan `@xyflow/react` untuk visual editor yang intuitif
 - **Automation Engine**: Playwright (Chromium) untuk eksekusi automasi yang robust
-- **Desktop App**: Electron untuk distribusi sebagai aplikasi desktop yang dapat dijalankan secara standalone
 - **Modular Architecture**: Struktur kode yang modular untuk kemudahan maintenance dan pengembangan
 
 ### Struktur Runner
@@ -168,24 +167,6 @@ Akses aplikasi di `http://localhost:3000`
 npm run build
 npm start
 ```
-
-### Electron Desktop App
-
-```bash
-# Development mode
-npm run electron:dev
-
-# Build untuk Windows
-npm run electron:build:win
-
-# Build untuk macOS
-npm run electron:build:mac
-
-# Build untuk Linux
-npm run electron:build:linux
-```
-
----
 
 ## Workflow Penggunaan
 
@@ -277,7 +258,6 @@ npx playwright test
 
 ```
 otomate/
-├── electron/              # Electron main process files
 ├── public/               # Static assets
 ├── src/
 │   ├── app/
@@ -294,7 +274,6 @@ otomate/
 │   │   │   ├── context/            # Editor state management
 │   │   │   └── utils/              # Editor utilities
 │   │   ├── inspector/    # Inspector mode page
-│   │   ├── logs/         # Execution logs viewer
 │   │   ├── settings/     # Application settings
 │   │   └── templates/    # Automation plan templates
 │   ├── components/        # Shared UI components
@@ -352,70 +331,27 @@ _Mengotomatisasi dengan kontrol, observabilitas, dan akuntabilitas._
 
 ## Documentation: TEMPLATE_STORAGE.md
 
-### Template Storage - JSON File Storage Implementation
+### Template Storage - LocalStorage Implementation
 
-## 📋 Overview
+## ?? Overview
 
-Template storage sekarang menggunakan **JSON file storage** yang disimpan di file system melalui Electron, dengan fallback ke localStorage untuk mode web.
+Template storage menggunakan `localStorage` dengan key `otomate_templates`.
 
-## 🗂️ Lokasi Penyimpanan
+## ??? Lokasi Penyimpanan
 
-### Electron (Desktop App)
+- Browser `localStorage` pada key `otomate_templates`
 
-- **Windows**: `%APPDATA%/otomate/templates.json`
-- **macOS**: `~/Library/Application Support/otomate/templates.json`
-- **Linux**: `~/.config/otomate/templates.json`
+## ?? Struktur Implementasi
 
-### Web Mode
-
-- Fallback ke `localStorage` dengan key `otomate_templates`
-
-## 🔧 Struktur Implementasi
-
-### 1. Electron Main Process
-
-- **File**: `electron/templateStorage.js`
-- **Fungsi**:
-  - `readTemplates()` - Membaca template dari file
-  - `writeTemplates(templates)` - Menulis template ke file
-  - `migrateFromLocalStorage(data)` - Migrasi dari localStorage
-  - `getStorageInfo()` - Info tentang storage
-
-### 2. IPC Handlers
-
-- **File**: `electron/main.js`
-- **Handlers**:
-  - `template-storage:read` - Read templates
-  - `template-storage:write` - Write templates
-  - `template-storage:migrate` - Migrate from localStorage
-  - `template-storage:info` - Get storage info
-
-### 3. Preload Script
-
-- **File**: `electron/preload.js`
-- **Exposed API**: `window.electronAPI.templateStorage`
-
-### 4. Frontend Service
+### Frontend Service
 
 - **File**: `src/lib/templateStorage.js`
 - **Fungsi**:
-  - `getTemplates()` - Async read dengan auto-fallback
-  - `saveTemplates(templates)` - Async write dengan auto-fallback
-  - `migrateToFileStorage()` - Auto-migration on mount
-  - `getStorageInfo()` - Get storage information
-  - `isFileStorageAvailable()` - Check if Electron available
+  - `getTemplates()` - Membaca template dari localStorage
+  - `saveTemplates(templates)` - Menyimpan template ke localStorage
+  - `getStorageInfo()` - Info ringkas tentang storage
 
-## 🔄 Auto-Migration
-
-Migration dari localStorage ke file storage dilakukan otomatis:
-
-- **Trigger**: Saat aplikasi pertama kali dibuka setelah update
-- **Behavior**:
-  - Hanya migrasi sekali (flag: `otomate_migrated_to_file`)
-  - Tidak overwrite jika file sudah ada
-  - Data tetap ada di localStorage sebagai backup
-
-## 📝 Penggunaan
+## ?? Penggunaan
 
 ### Di Component React
 
@@ -429,26 +365,14 @@ const templates = await getTemplates();
 const success = await saveTemplates(templates);
 ```
 
-### Auto-Migration
+## ? Keuntungan
 
-```javascript
-import { migrateToFileStorage } from "@/lib/templateStorage";
+1. **Sederhana**: Tidak memerlukan service tambahan
+2. **Cepat**: Akses data tersimpan langsung di browser
+3. **Ringan**: Cocok untuk kebutuhan internal
+4. **No Dependencies**: Tidak perlu install database library
 
-// Di useEffect on mount
-useEffect(() => {
-  migrateToFileStorage();
-}, []);
-```
-
-## ✅ Keuntungan
-
-1. **Persistensi**: Data tersimpan di file system, tidak hilang saat clear browser cache
-2. **Portabilitas**: File bisa di-copy/backup dengan mudah
-3. **Backward Compatible**: Fallback ke localStorage untuk web mode
-4. **Auto-Migration**: Migrasi otomatis tanpa kehilangan data
-5. **No Dependencies**: Tidak perlu install database library
-
-## 🔍 Debugging
+## ?? Debugging
 
 ### Check Storage Info
 
@@ -457,155 +381,14 @@ import { getStorageInfo } from "@/lib/templateStorage";
 
 const info = await getStorageInfo();
 console.log(info);
-// Output: { type: 'file', path: '...', size: 1234, templateCount: 5 }
+// Output: { type: 'localStorage', size: 1234, templateCount: 5 }
 ```
 
-### Manual File Access
+## ?? Catatan Penting
 
-File JSON bisa dibuka langsung dengan text editor untuk:
-
-- Backup manual
-- Debugging struktur data
-- Manual editing (tidak disarankan)
-
-## ⚠️ Catatan Penting
-
-1. **File Format**: JSON dengan pretty formatting (2 spaces indent)
+1. **Format Data**: Disimpan sebagai JSON
 2. **Error Handling**: Semua error di-handle dengan fallback ke localStorage
-3. **Concurrent Access**: File operations di-handle secara sequential oleh Electron IPC
-4. **Data Validation**: Template harus berupa array, invalid data akan di-reject
-
-## 🚀 Next Steps (Optional)
-
-Jika di masa depan perlu fitur lebih advanced:
-
-- **SQLite**: Untuk query kompleks dan indexing
-- **Encryption**: Untuk encrypt sensitive data (login credentials)
-- **Cloud Sync**: Sync ke cloud storage
-- **Version Control**: Git-like versioning untuk templates
-
----
-
-## Documentation: ELECTRON_SETUP.md
-
-### Setup Electron untuk PrivyLens
-
-Aplikasi PrivyLens sekarang sudah dikonfigurasi untuk berjalan sebagai aplikasi desktop menggunakan Electron.
-
-## 📋 Prerequisites
-
-Pastikan Anda sudah menginstall:
-
-- Node.js (v18 atau lebih baru)
-- npm atau yarn
-
-## 🚀 Cara Menggunakan
-
-### Development Mode
-
-Jalankan aplikasi dalam mode development dengan hot-reload:
-
-```bash
-npm run electron:dev
-```
-
-Perintah ini akan:
-
-1. Menjalankan Next.js dev server di `http://localhost:3000`
-2. Membuka window Electron yang terhubung ke dev server
-3. DevTools akan otomatis terbuka untuk debugging
-
-### Build untuk Production
-
-#### Build untuk Windows:
-
-```bash
-npm run electron:build:win
-```
-
-#### Build untuk macOS:
-
-```bash
-npm run electron:build:mac
-```
-
-#### Build untuk Linux:
-
-```bash
-npm run electron:build:linux
-```
-
-#### Build untuk semua platform:
-
-```bash
-npm run electron:build
-```
-
-File hasil build akan berada di folder `dist/`.
-
-## 📁 Struktur File Electron
-
-```
-electron/
-├── main.js      # Main process Electron (entry point)
-└── preload.js   # Preload script untuk keamanan
-```
-
-## ⚙️ Konfigurasi
-
-### Package.json Scripts
-
-- `electron:dev` - Development mode dengan hot-reload
-- `electron:build` - Build untuk semua platform
-- `electron:build:win` - Build khusus Windows
-- `electron:build:mac` - Build khusus macOS
-- `electron:build:linux` - Build khusus Linux
-
-### Electron Builder Config
-
-Konfigurasi electron-builder ada di `package.json` bagian `build`:
-
-- **App ID**: `com.privylens.app`
-- **Product Name**: `PrivyLens`
-- **Output Directory**: `dist/`
-
-## 🔧 Troubleshooting
-
-### Port 3000 sudah digunakan
-
-Jika port 3000 sudah digunakan, ubah variabel `PORT` di `electron/main.js` atau set environment variable:
-
-```bash
-PORT=3001 npm run electron:dev
-```
-
-### Build gagal
-
-Pastikan:
-
-1. Next.js build berhasil: `npm run build`
-2. Folder `.next/standalone` ada setelah build
-3. Semua dependencies terinstall: `npm install`
-
-### Window tidak muncul
-
-- Periksa console untuk error messages
-- Pastikan Next.js server berjalan dengan benar
-- Cek apakah port yang digunakan tidak blocked
-
-## 📝 Catatan Penting
-
-1. **Standalone Output**: Next.js dikonfigurasi untuk menghasilkan standalone output yang diperlukan untuk Electron
-2. **Images Unoptimized**: Images di Next.js di-set unoptimized untuk kompatibilitas dengan Electron
-3. **Security**: Electron menggunakan context isolation dan node integration disabled untuk keamanan
-
-## 🎯 Next Steps
-
-Setelah build berhasil, Anda bisa:
-
-- Distribusikan file installer dari folder `dist/`
-- Sign aplikasi untuk distribusi (opsional)
-- Update icon dan metadata sesuai kebutuhan
+3. **Data Validation**: Template harus berupa array, invalid data akan di-reject
 
 ---
 
