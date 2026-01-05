@@ -3,7 +3,16 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
-import { Home, FilePlus, FolderOpen, Settings, FileText, Search, PlayCircle, Code } from "lucide-react";
+import {
+  Home,
+  FilePlus,
+  FolderOpen,
+  Settings,
+  FileText,
+  Search,
+  PlayCircle,
+  Code,
+} from "lucide-react";
 
 const menuItems = [
   {
@@ -56,7 +65,7 @@ export default function Sidebar() {
             alt="OtoMate Logo"
             width={48}
             height={48}
-            className="flex-shrink-0"
+            className="shrink-0"
           />
           <div>
             <h1 className="text-xl font-bold text-gray-900">OtoMate</h1>
@@ -102,4 +111,3 @@ export default function Sidebar() {
     </aside>
   );
 }
-

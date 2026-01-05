@@ -1,6 +1,6 @@
 /**
  * API Route untuk menjalankan Sandbox Playwright Script
- * 
+ *
  * POST /api/sandbox/execute
  * Body: { url, headless, actions, timeout }
  */
@@ -14,10 +14,7 @@ export async function POST(request) {
 
     // Validate input
     if (!url) {
-      return Response.json(
-        { error: "URL is required" },
-        { status: 400 }
-      );
+      return Response.json({ error: "URL is required" }, { status: 400 });
     }
 
     if (!Array.isArray(actions)) {
@@ -51,4 +48,3 @@ export async function POST(request) {
     );
   }
 }
-

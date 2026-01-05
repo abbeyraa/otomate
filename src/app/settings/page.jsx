@@ -1,20 +1,11 @@
 "use client";
 
 import { Settings as SettingsIcon, Database } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { getSettings, saveSettings } from "@/lib/settingsStorage";
 
 export default function SettingsPage() {
-  const [settings, setSettings] = useState({
-    autoSave: true,
-    darkMode: false,
-    language: "id",
-  });
-
-  useEffect(() => {
-    const loadedSettings = getSettings();
-    setSettings(loadedSettings);
-  }, []);
+  const [settings, setSettings] = useState(() => getSettings());
 
   const handleToggle = (key) => {
     const newSettings = {

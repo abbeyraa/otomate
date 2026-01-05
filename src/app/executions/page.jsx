@@ -20,25 +20,17 @@ import { useRouter } from "next/navigation";
 
 export default function ExecutionsPage() {
   const router = useRouter();
-  const [executions, setExecutions] = useState([]);
-  const [selectedExecution, setSelectedExecution] = useState(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [runningExecutions, setRunningExecutions] = useState(new Set());
+  const getExecutionStatus = (log) => {
+    if (log.report?.status === "running") return "running";
+    if (log.report?.status === "error") return "failed";
+    if (log.report?.status === "failed") return "failed";
+    if (log.report?.status === "partial") return "partial";
+    if (log.report?.status === "success") return "completed";
+    return "unknown";
+  };
 
-  useEffect(() => {
-    loadExecutions();
-    // Poll for running executions every 2 seconds
-    const interval = setInterval(() => {
-      checkRunningExecutions();
-    }, 2000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const loadExecutions = () => {
-    const logs = getExecutionLogs();
-    // Transform logs to executions format
-    const transformed = logs.map((log) => ({
+  const transformExecutions = (logs) =>
+    logs.map((log) => ({
       id: log.id,
       timestamp: log.timestamp,
       status: getExecutionStatus(log),
@@ -53,17 +45,14 @@ export default function ExecutionsPage() {
       plan: log.plan,
       isRunning: false,
     }));
-    setExecutions(transformed);
-  };
 
-  const getExecutionStatus = (log) => {
-    if (log.report?.status === "running") return "running";
-    if (log.report?.status === "error") return "failed";
-    if (log.report?.status === "failed") return "failed";
-    if (log.report?.status === "partial") return "partial";
-    if (log.report?.status === "success") return "completed";
-    return "unknown";
-  };
+  const [executions, setExecutions] = useState(() =>
+    transformExecutions(getExecutionLogs())
+  );
+  const [selectedExecution, setSelectedExecution] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [runningExecutions, setRunningExecutions] = useState(new Set());
 
   const checkRunningExecutions = () => {
     // Check if there are any executions marked as running
@@ -186,7 +175,11 @@ export default function ExecutionsPage() {
   };
 
   const handleRetryExecution = (execution) => {
-    if (confirm("Jalankan ulang eksekusi ini dengan template dan versi yang sama?")) {
+    if (
+      confirm(
+        "Jalankan ulang eksekusi ini dengan template dan versi yang sama?"
+      )
+    ) {
       // Navigate to editor with the plan loaded
       // In a real implementation, this would load the template and version
       router.push(`/editor?retry=${execution.id}`);
@@ -196,6 +189,14 @@ export default function ExecutionsPage() {
   const handleViewDetails = (execution) => {
     setSelectedExecution(execution);
   };
+
+  useEffect(() => {
+    // Poll for running executions every 2 seconds
+    const interval = setInterval(() => {
+      checkRunningExecutions();
+    }, 2000);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <div className="h-full flex flex-col">
@@ -309,7 +310,9 @@ export default function ExecutionsPage() {
                       <div className="mb-3">
                         <p className="text-sm text-gray-600">
                           <span className="font-medium">Target:</span>{" "}
-                          <span className="text-gray-900">{execution.targetUrl}</span>
+                          <span className="text-gray-900">
+                            {execution.targetUrl}
+                          </span>
                         </p>
                       </div>
 
@@ -395,7 +398,9 @@ export default function ExecutionsPage() {
           <div className="w-96 border-l border-[#e5e5e5] bg-white overflow-y-auto">
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-lg font-semibold text-gray-900">Detail Eksekusi</h2>
+                <h2 className="text-lg font-semibold text-gray-900">
+                  Detail Eksekusi
+                </h2>
                 <button
                   onClick={() => setSelectedExecution(null)}
                   className="text-gray-500 hover:text-gray-700"
@@ -407,7 +412,9 @@ export default function ExecutionsPage() {
               <div className="space-y-6">
                 {/* Status */}
                 <div>
-                  <h3 className="text-sm font-semibold text-gray-700 mb-3">Status</h3>
+                  <h3 className="text-sm font-semibold text-gray-700 mb-3">
+                    Status
+                  </h3>
                   <div className="flex items-center gap-3">
                     {getStatusIcon(selectedExecution.status)}
                     <span
@@ -422,7 +429,9 @@ export default function ExecutionsPage() {
 
                 {/* Template Info */}
                 <div>
-                  <h3 className="text-sm font-semibold text-gray-700 mb-3">Template</h3>
+                  <h3 className="text-sm font-semibold text-gray-700 mb-3">
+                    Template
+                  </h3>
                   <div className="space-y-2 text-sm">
                     <div>
                       <span className="text-gray-600">Nama:</span>{" "}
@@ -441,7 +450,9 @@ export default function ExecutionsPage() {
 
                 {/* Timing */}
                 <div>
-                  <h3 className="text-sm font-semibold text-gray-700 mb-3">Waktu</h3>
+                  <h3 className="text-sm font-semibold text-gray-700 mb-3">
+                    Waktu
+                  </h3>
                   <div className="space-y-2 text-sm">
                     <div>
                       <span className="text-gray-600">Mulai:</span>{" "}
@@ -468,7 +479,9 @@ export default function ExecutionsPage() {
 
                 {/* Target */}
                 <div>
-                  <h3 className="text-sm font-semibold text-gray-700 mb-3">Target</h3>
+                  <h3 className="text-sm font-semibold text-gray-700 mb-3">
+                    Target
+                  </h3>
                   <div className="text-sm text-gray-600 break-all">
                     {selectedExecution.targetUrl}
                   </div>
@@ -477,7 +490,9 @@ export default function ExecutionsPage() {
                 {/* Summary */}
                 {selectedExecution.summary && (
                   <div>
-                    <h3 className="text-sm font-semibold text-gray-700 mb-3">Ringkasan</h3>
+                    <h3 className="text-sm font-semibold text-gray-700 mb-3">
+                      Ringkasan
+                    </h3>
                     <div className="grid grid-cols-2 gap-3 text-sm">
                       <div className="bg-gray-50 p-3 rounded-lg">
                         <div className="text-gray-600 mb-1">Total</div>
@@ -542,7 +557,9 @@ export default function ExecutionsPage() {
                 <div className="pt-4 border-t">
                   <div className="text-xs text-gray-500">
                     <div className="font-semibold mb-1">Execution ID:</div>
-                    <div className="font-mono break-all">{selectedExecution.id}</div>
+                    <div className="font-mono break-all">
+                      {selectedExecution.id}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -553,4 +570,3 @@ export default function ExecutionsPage() {
     </div>
   );
 }
-

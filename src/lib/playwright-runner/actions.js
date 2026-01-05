@@ -20,7 +20,14 @@ import { waitForElementReady, waitForAllEvents } from "./waitHelpers";
  * @param {Object} rowData - Row data for fill actions (field mapping).
  * @returns {Promise<Object>} Action execution result with success status.
  */
-export async function executeAction(page, action, plan, rowData, safeRun = false, context = {}) {
+export async function executeAction(
+  page,
+  action,
+  plan,
+  rowData,
+  safeRun = false,
+  context = {}
+) {
   try {
     switch (action.type) {
       case "fill": {
@@ -70,7 +77,9 @@ export async function executeAction(page, action, plan, rowData, safeRun = false
         // === Ensure element is scrolled into view before filling ===
         // This handles cases where element is below viewport or hidden
         try {
-          const isVisible = await element.isVisible({ timeout: 1000 }).catch(() => false);
+          const isVisible = await element
+            .isVisible({ timeout: 1000 })
+            .catch(() => false);
           if (!isVisible) {
             // Element exists in DOM but not visible - scroll to it
             await element.scrollIntoViewIfNeeded({ timeout: 3000 });
@@ -113,7 +122,7 @@ export async function executeAction(page, action, plan, rowData, safeRun = false
             targetLower.includes("send") ||
             action.target === "button[type='submit']" ||
             action.target === "input[type='submit']";
-          
+
           if (isSubmitButton) {
             return {
               type: action.type,
@@ -124,16 +133,16 @@ export async function executeAction(page, action, plan, rowData, safeRun = false
             };
           }
         }
-        
+
         // === Wait for page to be fully loaded before clicking ===
         await waitForAllEvents(page, { timeout: 10000 });
-        
+
         // === Execute click action on target element ===
         await clickByTextOrSelector(page, action.target);
-        
+
         // === Wait for any post-click loading to complete ===
         await waitForAllEvents(page, { timeout: 5000 });
-        
+
         return { type: action.type, target: action.target, success: true };
       }
 
@@ -161,15 +170,15 @@ export async function executeAction(page, action, plan, rowData, safeRun = false
           // === Navigate back to initial target URL ===
           await page.goto(plan.target.url, { waitUntil: "networkidle" });
         }
-        
+
         // === Wait for all loading events to complete ===
         await waitForAllEvents(page, { timeout: 30000 });
-        
+
         // === Wait for page ready indicator ===
         if (!action.target || action.target === plan.target.url) {
           await waitForPageReady(page, plan.target.pageReadyIndicator);
         }
-        
+
         return {
           type: action.type,
           target: action.target || plan.target.url,
@@ -189,7 +198,7 @@ export async function executeAction(page, action, plan, rowData, safeRun = false
         target: action.target,
       });
     }
-    
+
     // === Return error result if action execution fails ===
     return {
       type: action.type,
@@ -230,29 +239,41 @@ export async function executeActionsForRow(
     const currentUrl = page.url();
     if (!currentUrl.includes(new URL(targetUrl).pathname)) {
       await page.goto(targetUrl, { waitUntil: "networkidle" });
-      
+
       // === Wait for all loading events to complete ===
       await waitForAllEvents(page, { timeout: 30000 });
-      
+
       // === Wait for page ready indicator ===
       await waitForPageReady(page, plan.target.pageReadyIndicator);
     }
 
     // === Execute each action in sequence ===
-    for (let actionIndex = 0; actionIndex < plan.actions.length; actionIndex++) {
+    for (
+      let actionIndex = 0;
+      actionIndex < plan.actions.length;
+      actionIndex++
+    ) {
       const action = plan.actions[actionIndex];
-      const actionResult = await executeAction(page, action, plan, rowData, safeRun, {
-        rowIndex,
-        actionIndex,
-        actionType: action.type,
-        target: action.target,
-        dataRow: rowData,
-        pageUrl: targetUrl,
-        fieldMapping: action.type === "fill" 
-          ? plan.fieldMappings.find((fm) => fm.name === action.target)
-          : null,
-        pageReadyIndicator: plan.target.pageReadyIndicator,
-      });
+      const actionResult = await executeAction(
+        page,
+        action,
+        plan,
+        rowData,
+        safeRun,
+        {
+          rowIndex,
+          actionIndex,
+          actionType: action.type,
+          target: action.target,
+          dataRow: rowData,
+          pageUrl: targetUrl,
+          fieldMapping:
+            action.type === "fill"
+              ? plan.fieldMappings.find((fm) => fm.name === action.target)
+              : null,
+          pageReadyIndicator: plan.target.pageReadyIndicator,
+        }
+      );
       actionResults.push(actionResult);
 
       // === Stop execution if required action fails ===
@@ -307,7 +328,7 @@ export async function executeActionsForRow(
         pageReadyIndicator: plan.target.pageReadyIndicator,
       });
     }
-    
+
     // === Return failed result with error details ===
     return {
       rowIndex,
@@ -333,7 +354,13 @@ export async function executeActionsForRow(
  * @returns {Promise<Array>} Array of execution results for each iteration.
  * @throws {Error} If loop indicator configuration is missing.
  */
-export async function executeActionsWithLoop(page, plan, rowData, targetUrl, safeRun = false) {
+export async function executeActionsWithLoop(
+  page,
+  plan,
+  rowData,
+  targetUrl,
+  safeRun = false
+) {
   // === Extract loop configuration with defaults ===
   const loop = plan.execution?.loop || {};
   const maxIterations = Number(loop.maxIterations ?? 50);

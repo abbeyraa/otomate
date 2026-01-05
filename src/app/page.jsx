@@ -16,51 +16,34 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { getExecutionLogs } from "@/lib/sessionStorage";
-import { getTemplates, migrateToFileStorage } from "@/lib/templateStorage";
+import { migrateToFileStorage } from "@/lib/templateStorage";
 
 export default function HomePage() {
-  const [executions, setExecutions] = useState([]);
-  const [stats, setStats] = useState({
-    totalTemplates: 0,
-    totalExecutions: 0,
-    successRate: 0,
-    recentFailures: 0,
-  });
+  const getStoredTemplates = () => {
+    if (typeof window === "undefined") return [];
+    try {
+      const stored = localStorage.getItem("otomate_templates");
+      return stored ? JSON.parse(stored) : [];
+    } catch (error) {
+      console.error("Failed to load templates from localStorage:", error);
+      return [];
+    }
+  };
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  const getStoredExecutions = () => getExecutionLogs();
 
-  const loadData = async () => {
-    // Migrate templates first (only runs once)
-    await migrateToFileStorage();
-    
-    // Load templates
-    const templates = await getTemplates();
-    
-    // Count active templates (isActive: true)
+  const calculateStats = (templates, logs) => {
     const activeTemplates = templates.filter((t) => t.isActive !== false);
     const totalTemplates = activeTemplates.length;
-
-    // Load execution logs
-    const logs = getExecutionLogs();
-    setExecutions(logs);
-
-    // Calculate stats
     const totalExecutions = logs.length;
     const successful = logs.filter(
       (log) => log.report?.status === "success"
-    ).length;
-    const failed = logs.filter(
-      (log) =>
-        log.report?.status === "failed" || log.report?.status === "error"
     ).length;
     const successRate =
       totalExecutions > 0
         ? Math.round((successful / totalExecutions) * 100)
         : 0;
 
-    // Get recent failures (last 7 days)
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
     const recentFailures = logs.filter((log) => {
@@ -71,13 +54,18 @@ export default function HomePage() {
       );
     }).length;
 
-    setStats({
+    return {
       totalTemplates,
       totalExecutions,
       successRate,
       recentFailures,
-    });
+    };
   };
+
+  const [executions] = useState(() => getStoredExecutions());
+  const [stats] = useState(() =>
+    calculateStats(getStoredTemplates(), getStoredExecutions())
+  );
 
   const formatDate = (timestamp) => {
     return new Date(timestamp).toLocaleString("id-ID", {
@@ -137,8 +125,7 @@ export default function HomePage() {
   const alerts = [];
   const recentFailures = executions
     .filter(
-      (log) =>
-        log.report?.status === "failed" || log.report?.status === "error"
+      (log) => log.report?.status === "failed" || log.report?.status === "error"
     )
     .slice(0, 3);
 
@@ -146,7 +133,9 @@ export default function HomePage() {
     alerts.push({
       type: "error",
       title: "Eksekusi Gagal",
-      message: `${log.plan?.templateName || "Manual Execution"} gagal dieksekusi`,
+      message: `${
+        log.plan?.templateName || "Manual Execution"
+      } gagal dieksekusi`,
       timestamp: log.timestamp,
       id: log.id,
     });
@@ -161,6 +150,10 @@ export default function HomePage() {
       timestamp: new Date().toISOString(),
     });
   }
+
+  useEffect(() => {
+    migrateToFileStorage();
+  }, []);
 
   return (
     <div className="h-full flex flex-col">
@@ -210,15 +203,11 @@ export default function HomePage() {
               <div className="bg-white border border-[#e5e5e5] rounded-lg p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-gray-600 mb-1">
-                      Total Eksekusi
-                    </p>
+                    <p className="text-sm text-gray-600 mb-1">Total Eksekusi</p>
                     <p className="text-3xl font-bold text-gray-900">
                       {stats.totalExecutions}
                     </p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Semua waktu
-                    </p>
+                    <p className="text-xs text-gray-500 mt-1">Semua waktu</p>
                   </div>
                   <div className="p-3 bg-green-50 rounded-lg">
                     <PlayCircle className="w-6 h-6 text-green-600" />
@@ -292,9 +281,7 @@ export default function HomePage() {
                   {recentExecutions.length === 0 ? (
                     <div className="p-12 text-center">
                       <PlayCircle className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                      <p className="text-gray-600 mb-2">
-                        Belum ada eksekusi
-                      </p>
+                      <p className="text-gray-600 mb-2">Belum ada eksekusi</p>
                       <p className="text-sm text-gray-500 mb-4">
                         Mulai dengan menjalankan automation plan pertama Anda
                       </p>
@@ -315,7 +302,9 @@ export default function HomePage() {
                         >
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3 flex-1">
-                              {getStatusIcon(execution.report?.status || "unknown")}
+                              {getStatusIcon(
+                                execution.report?.status || "unknown"
+                              )}
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 mb-1">
                                   <p className="font-medium text-gray-900 truncate">
@@ -343,7 +332,8 @@ export default function HomePage() {
                                       </span>
                                       {execution.report.summary.failed > 0 && (
                                         <span className="text-red-600">
-                                          {execution.report.summary.failed} gagal
+                                          {execution.report.summary.failed}{" "}
+                                          gagal
                                         </span>
                                       )}
                                     </>
@@ -351,7 +341,7 @@ export default function HomePage() {
                                 </div>
                               </div>
                             </div>
-                            <ArrowRight className="w-5 h-5 text-gray-400 flex-shrink-0" />
+                            <ArrowRight className="w-5 h-5 text-gray-400 shrink-0" />
                           </div>
                         </Link>
                       ))}
@@ -379,7 +369,8 @@ export default function HomePage() {
                           Buat Template Baru
                         </h3>
                         <p className="text-sm text-gray-600">
-                          Rancang automation plan baru untuk proses yang berulang
+                          Rancang automation plan baru untuk proses yang
+                          berulang
                         </p>
                       </div>
                     </div>
@@ -437,9 +428,9 @@ export default function HomePage() {
                         >
                           <div className="flex items-start gap-3">
                             {alert.type === "error" ? (
-                              <XCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                              <XCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
                             ) : (
-                              <AlertTriangle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+                              <AlertTriangle className="w-5 h-5 text-yellow-600 shrink-0 mt-0.5" />
                             )}
                             <div className="flex-1 min-w-0">
                               <h4

@@ -13,7 +13,7 @@ export default function Header() {
               alt="OtoMate Logo"
               width={40}
               height={40}
-              className="flex-shrink-0"
+              className="shrink-0"
             />
             <span className="text-2xl font-bold text-gray-900">OtoMate</span>
           </div>

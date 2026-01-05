@@ -48,7 +48,9 @@ export async function startInspector(targetUrl) {
  */
 export async function stopInspector(sessionId) {
   try {
-    const { removeBrowserInstance } = await import("@/lib/inspectorBrowserManager");
+    const { removeBrowserInstance } = await import(
+      "@/lib/inspectorBrowserManager"
+    );
     await removeBrowserInstance(sessionId);
     return {
       success: true,
@@ -61,4 +63,3 @@ export async function stopInspector(sessionId) {
     };
   }
 }
-

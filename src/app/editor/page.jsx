@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   DndContext,
@@ -247,7 +247,6 @@ export default function EditorPage() {
   const router = useRouter();
 
   // State management
-  const [steps, setSteps] = useState([]);
   const [expandedSteps, setExpandedSteps] = useState({});
   const [selectedStep, setSelectedStep] = useState(null);
   const [activePanel, setActivePanel] = useState("list"); // list, preview
@@ -385,7 +384,7 @@ export default function EditorPage() {
     };
 
     loadTemplate();
-  }, [searchParams]);
+  }, [searchParams, getTemplates, migrateToFileStorage]);
 
   // Load state on mount (only if no template loaded)
   useEffect(() => {
@@ -446,7 +445,7 @@ export default function EditorPage() {
         setActionNodes(actions);
       }
     }
-  }, []);
+  }, [currentTemplateId, loadEditorState]);
 
   // Convert state to steps whenever state changes
   const hasDataSourceNode = useMemo(
@@ -454,7 +453,7 @@ export default function EditorPage() {
     [rows, manualRows]
   );
 
-  useEffect(() => {
+  const steps = useMemo(() => {
     const currentState = {
       targetUrl,
       requiresLogin,
@@ -479,8 +478,7 @@ export default function EditorPage() {
       failureIndicator,
       execution,
     };
-    const newSteps = convertStateToSteps(currentState);
-    setSteps(newSteps);
+    return convertStateToSteps(currentState);
   }, [
     targetUrl,
     requiresLogin,
@@ -568,6 +566,7 @@ export default function EditorPage() {
     successIndicator,
     failureIndicator,
     execution,
+    saveEditorState,
   ]);
 
   // Auto-save template if autosave is enabled and template exists
@@ -619,6 +618,10 @@ export default function EditorPage() {
     currentTemplateId,
     templateName,
     templateDescription,
+    generateAutomationPlan,
+    getSetting,
+    getTemplates,
+    saveTemplates,
     targetUrl,
     requiresLogin,
     loginUrl,
@@ -661,35 +664,21 @@ export default function EditorPage() {
     const { active, over } = event;
 
     if (over && active.id !== over.id) {
-      setSteps((items) => {
-        const oldIndex = items.findIndex((item) => item.id === active.id);
-        const newIndex = items.findIndex((item) => item.id === over.id);
+      const activeStep = steps.find((step) => step.id === active.id);
+      const overStep = steps.find((step) => step.id === over.id);
+      if (!activeStep || !overStep) return;
+      if (activeStep.deletable === false) return;
+      if (activeStep.type !== "action" || overStep.type !== "action") return;
 
-        // Don't allow moving target step
-        if (items[oldIndex].deletable === false) {
-          return items;
-        }
+      setActionNodes((prev) => {
+        const oldIndex = prev.findIndex((item) => item.id === active.id);
+        const newIndex = prev.findIndex((item) => item.id === over.id);
+        if (oldIndex === -1 || newIndex === -1) return prev;
 
-        const newSteps = arrayMove(items, oldIndex, newIndex);
-
-        // Update action nodes positions based on new order
-        const actionSteps = newSteps.filter((s) => s.type === "action");
-        setActionNodes((prev) => {
-          return actionSteps
-            .map((step, index) => {
-              const existing = prev.find((a) => a.id === step.id);
-              if (existing) {
-                return {
-                  ...existing,
-                  position: { x: 60, y: 200 + index * 100 },
-                };
-              }
-              return existing;
-            })
-            .filter(Boolean);
-        });
-
-        return newSteps;
+        return arrayMove(prev, oldIndex, newIndex).map((node, index) => ({
+          ...node,
+          position: { x: 60, y: 200 + index * 100 },
+        }));
       });
     }
   };
@@ -784,7 +773,7 @@ export default function EditorPage() {
   };
 
   // Generate automation plan
-  const generateAutomationPlan = () => {
+  const generateAutomationPlan = useCallback(() => {
     const plan = {
       target: {
         url: targetUrl.trim(),
@@ -868,7 +857,27 @@ export default function EditorPage() {
     };
 
     return plan;
-  };
+  }, [
+    targetUrl,
+    pageReadyType,
+    pageReadyValue,
+    requiresLogin,
+    loginUrl,
+    loginUsername,
+    loginPassword,
+    navigationSteps,
+    hasDataSourceNode,
+    dataSourceType,
+    effectiveRows,
+    dataMode,
+    selectedRowIndex,
+    fieldMappings,
+    execution,
+    actionNodes,
+    steps,
+    successIndicator,
+    failureIndicator,
+  ]);
 
   // Save template
   const handleSaveTemplate = async (templateData) => {
@@ -1334,4 +1343,3 @@ export default function EditorPage() {
     </div>
   );
 }
-  

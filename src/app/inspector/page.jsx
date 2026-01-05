@@ -1,10 +1,27 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Play, Square, RefreshCw, Download, Upload, Eye, EyeOff, CheckCircle, XCircle, Clock, Navigation, MousePointer, Type, AlertCircle, Save } from "lucide-react";
+import {
+  Play,
+  Square,
+  RefreshCw,
+  Download,
+  Upload,
+  Eye,
+  EyeOff,
+  CheckCircle,
+  XCircle,
+  Clock,
+  Navigation,
+  MousePointer,
+  Type,
+  AlertCircle,
+  Save,
+} from "lucide-react";
 import Link from "next/link";
 import { convertEventsToActionFlow } from "@/lib/inspectorRecorder";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 
 // Event types
 const EVENT_TYPES = {
@@ -166,7 +183,7 @@ export default function InspectorPage() {
   // Simulate browser events (placeholder - akan diganti dengan real Playwright integration)
   const simulateBrowserEvents = () => {
     const baseTime = Date.now();
-    
+
     // Navigation event
     setTimeout(() => {
       addEvent({
@@ -217,7 +234,8 @@ export default function InspectorPage() {
     const event = {
       id: `event-${eventIdCounter.current++}`,
       ...eventData,
-      timestamp: eventData.timestamp || (Date.now() - (startTime.current || Date.now())),
+      timestamp:
+        eventData.timestamp || Date.now() - (startTime.current || Date.now()),
       createdAt: new Date().toISOString(),
     };
     setEvents((prev) => [...prev, event]);
@@ -331,7 +349,8 @@ export default function InspectorPage() {
               Interactive Automation Inspector
             </h1>
             <p className="text-sm text-gray-600 mt-1">
-              Amati dan pahami proses interaksi halaman web sebelum menyusun Automation Plan
+              Amati dan pahami proses interaksi halaman web sebelum menyusun
+              Automation Plan
             </p>
           </div>
           <Link
@@ -421,7 +440,7 @@ export default function InspectorPage() {
             ) : browserUrl ? (
               screenshotUrl ? (
                 <div className="h-full flex flex-col items-center justify-center bg-gray-100 rounded-lg border-2 border-gray-300 overflow-hidden relative">
-                  <img
+                  <Image
                     src={screenshotUrl}
                     alt="Browser Preview"
                     className="max-w-full max-h-full object-contain"
@@ -438,9 +457,12 @@ export default function InspectorPage() {
                 <div className="h-full flex flex-col items-center justify-center bg-gray-100 rounded-lg border-2 border-dashed border-gray-300">
                   <div className="text-center">
                     <RefreshCw className="w-16 h-16 text-gray-400 mx-auto mb-4 animate-spin" />
-                    <p className="text-gray-600 font-medium">Memuat preview...</p>
+                    <p className="text-gray-600 font-medium">
+                      Memuat preview...
+                    </p>
                     <p className="text-sm text-gray-500 mt-2">
-                      Browser Playwright sudah terbuka. Preview akan muncul sebentar lagi.
+                      Browser Playwright sudah terbuka. Preview akan muncul
+                      sebentar lagi.
                     </p>
                     {browserUrl && (
                       <p className="text-xs text-gray-400 mt-4 font-mono break-all px-4">
@@ -608,9 +630,7 @@ function EventCard({ event, isSelected, onSelect, onToggleImportant, index }) {
           >
             {getEventIcon(event.type)}
           </div>
-          {index < 10 && (
-            <div className="w-0.5 h-8 bg-gray-300 mt-2"></div>
-          )}
+          {index < 10 && <div className="w-0.5 h-8 bg-gray-300 mt-2"></div>}
         </div>
 
         {/* Event Content */}
@@ -662,7 +682,7 @@ function EventCard({ event, isSelected, onSelect, onToggleImportant, index }) {
 
         {/* Selection Indicator */}
         {isSelected && (
-          <div className="flex-shrink-0">
+          <div className="shrink-0">
             <div className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center">
               <CheckCircle className="w-4 h-4 text-white" />
             </div>
@@ -672,4 +692,3 @@ function EventCard({ event, isSelected, onSelect, onToggleImportant, index }) {
     </div>
   );
 }
-
