@@ -19,6 +19,7 @@ import { stepTemplates } from "./stepTemplates";
 
 export default function EditorPage() {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [showSaveConfirm, setShowSaveConfirm] = useState(false);
   const {
     groups,
     selectedStep,
@@ -101,6 +102,7 @@ export default function EditorPage() {
                   groups,
                 };
                 saveTemplate(template);
+                setShowSaveConfirm(true);
               }}
               className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium border rounded-lg ${
                 isInspecting || isRunning
@@ -245,6 +247,29 @@ export default function EditorPage() {
                     className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-red-100 text-red-700 hover:bg-red-200"
                   >
                     Reset
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+          {showSaveConfirm && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+              <div className="w-full max-w-md rounded-xl bg-white shadow-xl">
+                <div className="border-b border-[#e5e5e5] px-5 py-4">
+                  <h3 className="text-sm font-semibold text-gray-900">
+                    Template Tersimpan
+                  </h3>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Template sudah tersimpan di halaman Template.
+                  </p>
+                </div>
+                <div className="px-5 py-4 flex items-center justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setShowSaveConfirm(false)}
+                    className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium border border-[#e5e5e5] rounded-lg bg-white text-gray-700 hover:bg-gray-50"
+                  >
+                    OK
                   </button>
                 </div>
               </div>
