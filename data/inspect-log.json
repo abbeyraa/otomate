@@ -1,12 +1,54 @@
 {
-  "startedAt": "2026-01-06T02:28:22.078Z",
-  "endedAt": "2026-01-06T02:28:27.732Z",
-  "targetUrl": "about:blank",
+  "startedAt": "2026-01-06T02:55:31.981Z",
+  "endedAt": "2026-01-06T02:55:47.465Z",
+  "targetUrl": "http://localhost/unhan-kaporlap/auth/login",
   "events": [
     {
       "type": "navigation",
-      "url": "about:blank",
-      "ts": "2026-01-06T02:28:22.676Z"
+      "url": "http://localhost/unhan-kaporlap/auth/login",
+      "ts": "2026-01-06T02:55:32.552Z"
+    },
+    {
+      "type": "click",
+      "ts": "2026-01-06T02:55:37.610Z",
+      "selector": "div.card.mb-0 > div.card-body > div.mb-3:nth-of-type(4) > button.btn.btn-custom-theme",
+      "text": "Sign in",
+      "tag": "button",
+      "url": "http://localhost/unhan-kaporlap/auth/login"
+    },
+    {
+      "type": "navigation",
+      "url": "http://localhost/unhan-kaporlap/dashboard_admin",
+      "ts": "2026-01-06T02:55:38.579Z"
+    },
+    {
+      "type": "click",
+      "ts": "2026-01-06T02:55:42.209Z",
+      "selector": "div.collapse.show:nth-of-type(2) > ul.nav.nav-sidebar > li.nav-item.nav-item-submenu:nth-of-type(2) > a.nav-link",
+      "text": "Master",
+      "tag": "a",
+      "url": "http://localhost/unhan-kaporlap/dashboard_admin"
+    },
+    {
+      "type": "click",
+      "ts": "2026-01-06T02:55:43.046Z",
+      "selector": "li.nav-item.nav-item-submenu:nth-of-type(2) > ul.nav-group-sub.collapse > li.nav-item.nav-item-submenu:nth-of-type(1) > a.nav-link",
+      "text": "Kapor",
+      "tag": "a",
+      "url": "http://localhost/unhan-kaporlap/dashboard_admin"
+    },
+    {
+      "type": "click",
+      "ts": "2026-01-06T02:55:43.979Z",
+      "selector": "ul.nav-group-sub.collapse > li.nav-item:nth-of-type(1) > a.nav-link > span",
+      "text": "Kapor Item",
+      "tag": "span",
+      "url": "http://localhost/unhan-kaporlap/dashboard_admin"
+    },
+    {
+      "type": "navigation",
+      "url": "http://localhost/unhan-kaporlap/kapor_item",
+      "ts": "2026-01-06T02:55:44.261Z"
     }
   ]
 }
