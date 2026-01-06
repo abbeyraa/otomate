@@ -66,10 +66,6 @@ export async function POST(request) {
               if (!step.selector) throw new Error("Selector is required");
               await page.fill(step.selector, step.value || "");
               break;
-            case "Read Text":
-              if (!step.selector) throw new Error("Selector is required");
-              stepReport.result = await page.locator(step.selector).innerText();
-              break;
             case "Wait":
               {
                 const ms = Number.parseInt(step.waitMs, 10) || 1000;

@@ -1,6 +1,6 @@
 "use client";
 
-const actionTypes = ["Click", "Input", "Read Text", "Wait", "Navigate"];
+const actionTypes = ["Click", "Input", "Wait", "Navigate"];
 
 export function ActionDetails({ selectedStepData, onChange }) {
   if (!selectedStepData) {
@@ -51,35 +51,6 @@ export function ActionDetails({ selectedStepData, onChange }) {
               placeholder="Masukkan nilai"
               value={selectedStepData.value}
               onChange={(event) => onChange("value", event.target.value)}
-              className="w-full rounded-lg border border-[#e5e5e5] px-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-        </div>
-      );
-    case "Read Text":
-      return (
-        <div className="space-y-4">
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-2">
-              Selector / Elemen
-            </label>
-            <input
-              type="text"
-              placeholder=".title"
-              value={selectedStepData.selector}
-              onChange={(event) => onChange("selector", event.target.value)}
-              className="w-full rounded-lg border border-[#e5e5e5] px-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-2">
-              Label Hasil
-            </label>
-            <input
-              type="text"
-              placeholder="Nama data yang disimpan"
-              value={selectedStepData.label}
-              onChange={(event) => onChange("label", event.target.value)}
               className="w-full rounded-lg border border-[#e5e5e5] px-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
