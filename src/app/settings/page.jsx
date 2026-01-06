@@ -2,10 +2,12 @@
 
 import { Settings as SettingsIcon, Database } from "lucide-react";
 import { useState } from "react";
-import { getSettings, saveSettings } from "@/lib/settingsStorage";
 
 export default function SettingsPage() {
-  const [settings, setSettings] = useState(() => getSettings());
+  const [settings, setSettings] = useState({
+    autoSave: true,
+    language: "id",
+  });
 
   const handleToggle = (key) => {
     const newSettings = {
@@ -13,7 +15,6 @@ export default function SettingsPage() {
       [key]: !settings[key],
     };
     setSettings(newSettings);
-    saveSettings(newSettings);
   };
 
   const handleChange = (key, value) => {
@@ -22,7 +23,6 @@ export default function SettingsPage() {
       [key]: value,
     };
     setSettings(newSettings);
-    saveSettings(newSettings);
   };
 
   const settingSections = [
@@ -76,14 +76,6 @@ export default function SettingsPage() {
 
   return (
     <div className="h-full flex flex-col">
-      {/* Header */}
-      <div className="px-8 py-6 border-b border-[#e5e5e5] bg-white">
-        <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
-        <p className="text-sm text-gray-600 mt-1">
-          Kelola pengaturan aplikasi dan preferensi Anda
-        </p>
-      </div>
-
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-8">
         <div className="max-w-4xl mx-auto space-y-6">
