@@ -45,7 +45,7 @@ export function ActionDetails({ selectedStepData, onChange }) {
             </label>
             <input
               type="number"
-              placeholder="10000"
+              placeholder="5000"
               value={selectedStepData.timeoutMs}
               onChange={(event) => onChange("timeoutMs", event.target.value)}
               className="w-full rounded-lg border border-[#e5e5e5] px-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -98,7 +98,7 @@ export function ActionDetails({ selectedStepData, onChange }) {
             </label>
             <input
               type="number"
-              placeholder="10000"
+              placeholder="5000"
               value={selectedStepData.timeoutMs}
               onChange={(event) => onChange("timeoutMs", event.target.value)}
               className="w-full rounded-lg border border-[#e5e5e5] px-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -140,7 +140,7 @@ export function ActionDetails({ selectedStepData, onChange }) {
             </label>
             <input
               type="number"
-              placeholder="10000"
+              placeholder="5000"
               value={selectedStepData.timeoutMs}
               onChange={(event) => onChange("timeoutMs", event.target.value)}
               className="w-full rounded-lg border border-[#e5e5e5] px-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"

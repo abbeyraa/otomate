@@ -1,10 +1,14 @@
 {
   "type": "run",
-  "startedAt": "2026-01-06T03:49:06.102Z",
-  "endedAt": "2026-01-06T03:49:29.172Z",
+  "startedAt": "2026-01-06T03:56:00.798Z",
+  "endedAt": "2026-01-06T03:56:33.872Z",
   "targetUrl": "",
-  "status": "success",
-  "error": null,
+  "status": "failed",
+  "error": {
+    "message": "locator.waitFor: Timeout 10000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#cart').first() to be visible\u001b[22m\n",
+    "group": "Checkout Flow",
+    "step": "Buka Keranjang"
+  },
   "steps": [
     {
       "group": "Access",
@@ -12,39 +16,48 @@
       "action": "Navigate",
       "selector": "",
       "status": "success",
-      "ts": "2026-01-06T03:49:06.682Z"
+      "ts": "2026-01-06T03:56:01.361Z"
     },
     {
       "group": "Access",
-      "step": "Isi Kredensial",
+      "step": "Input Username",
       "action": "Input",
       "selector": "",
       "status": "success",
-      "ts": "2026-01-06T03:49:06.767Z"
+      "ts": "2026-01-06T03:56:01.442Z"
     },
     {
       "group": "Access",
-      "step": "Step Baru",
+      "step": "Input Password",
       "action": "Input",
       "selector": "",
       "status": "success",
-      "ts": "2026-01-06T03:49:17.290Z"
+      "ts": "2026-01-06T03:56:11.951Z"
     },
     {
       "group": "Access",
-      "step": "Klik Masuk",
+      "step": "Klik Sign In",
       "action": "Click",
       "selector": "",
       "status": "success",
-      "ts": "2026-01-06T03:49:27.802Z"
+      "ts": "2026-01-06T03:56:22.450Z"
     },
     {
-      "group": "Access",
-      "step": "Step Baru",
+      "group": "After Login",
+      "step": "Validasi Dashboard",
       "action": "Wait",
-      "selector": "",
+      "selector": ".dashboard",
       "status": "success",
-      "ts": "2026-01-06T03:49:28.165Z"
+      "ts": "2026-01-06T03:56:22.841Z"
+    },
+    {
+      "group": "Checkout Flow",
+      "step": "Buka Keranjang",
+      "action": "Click",
+      "selector": "#cart",
+      "status": "failed",
+      "ts": "2026-01-06T03:56:23.854Z",
+      "error": "locator.waitFor: Timeout 10000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#cart').first() to be visible\u001b[22m\n"
     }
   ]
 }

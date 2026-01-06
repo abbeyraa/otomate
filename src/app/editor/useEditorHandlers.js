@@ -82,7 +82,7 @@ export function useEditorHandlers() {
       selector: "",
       value: "",
       label: "",
-      timeoutMs: "",
+      timeoutMs: "5000",
       waitMs: "",
       url: "",
     };

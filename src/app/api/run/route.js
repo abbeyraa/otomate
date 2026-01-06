@@ -16,7 +16,7 @@ async function writeLog(data) {
 async function resolveLocator(page, step) {
   const selector = step.selector?.trim();
   const label = step.label?.trim();
-  const timeoutMs = Number.parseInt(step.timeoutMs, 10) || 10000;
+  const timeoutMs = Number.parseInt(step.timeoutMs, 10) || 5000;
 
   if (selector) {
     const locator = page.locator(selector).first();
@@ -68,10 +68,12 @@ export async function POST(request) {
   const browser = await chromium.launch({ headless: false });
   const context = await browser.newContext();
   const page = await context.newPage();
+  await page.bringToFront();
 
   try {
     if (targetUrl) {
       await page.goto(targetUrl, { waitUntil: "domcontentloaded" });
+      await page.bringToFront();
       report.steps.push({
         group: "system",
         step: "Target URL",
@@ -98,14 +100,14 @@ export async function POST(request) {
             case "Click":
               {
                 const locator = await resolveLocator(page, step);
-                const timeoutMs = Number.parseInt(step.timeoutMs, 10) || 10000;
+                const timeoutMs = Number.parseInt(step.timeoutMs, 10) || 5000;
                 await locator.click({ timeout: timeoutMs });
               }
               break;
             case "Input":
               {
                 const locator = await resolveLocator(page, step);
-                const timeoutMs = Number.parseInt(step.timeoutMs, 10) || 10000;
+                const timeoutMs = Number.parseInt(step.timeoutMs, 10) || 5000;
                 await locator.waitFor({ state: "visible", timeout: timeoutMs });
                 await locator.pressSequentially(step.value || "", {
                   delay: 100,
@@ -121,7 +123,7 @@ export async function POST(request) {
             case "Navigate":
               if (!step.url) throw new Error("URL is required");
               {
-                const timeoutMs = Number.parseInt(step.timeoutMs, 10) || 10000;
+                const timeoutMs = Number.parseInt(step.timeoutMs, 10) || 5000;
                 await page.goto(step.url, {
                   waitUntil: "domcontentloaded",
                   timeout: timeoutMs,
