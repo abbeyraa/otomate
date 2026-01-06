@@ -55,7 +55,7 @@ export default function EditorPage() {
           <div className="flex flex-wrap items-center justify-end gap-3">
             <div className="flex items-center gap-2">
               <label className="text-xs font-medium text-gray-500">
-                Inspect URL
+                Target URL
               </label>
               <input
                 type="text"
@@ -79,8 +79,8 @@ export default function EditorPage() {
               disabled={isInspecting}
               className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium border border-[#e5e5e5] rounded-lg ${
                 isInspecting
-                  ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                  : "bg-white text-gray-700 hover:bg-gray-50"
+                  ? "bg-amber-100 text-amber-400 cursor-not-allowed"
+                  : "bg-amber-200 text-amber-900 hover:bg-amber-300"
               }`}
             >
               {isInspecting ? "Inspecting..." : "Inspect"}
@@ -91,8 +91,8 @@ export default function EditorPage() {
               onClick={loadLogs}
               className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium border border-[#e5e5e5] rounded-lg ${
                 hasInspected && !isInspecting
-                  ? "bg-white text-gray-700 hover:bg-gray-50"
-                  : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                  ? "bg-blue-50 text-blue-700 hover:bg-blue-100"
+                  : "bg-blue-50 text-blue-300 cursor-not-allowed"
               }`}
             >
               Logs

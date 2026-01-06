@@ -1,16 +1,16 @@
 {
-  "startedAt": "2026-01-06T02:55:31.981Z",
-  "endedAt": "2026-01-06T02:55:47.465Z",
+  "startedAt": "2026-01-06T02:56:50.354Z",
+  "endedAt": "2026-01-06T02:56:59.080Z",
   "targetUrl": "http://localhost/unhan-kaporlap/auth/login",
   "events": [
     {
       "type": "navigation",
       "url": "http://localhost/unhan-kaporlap/auth/login",
-      "ts": "2026-01-06T02:55:32.552Z"
+      "ts": "2026-01-06T02:56:50.832Z"
     },
     {
       "type": "click",
-      "ts": "2026-01-06T02:55:37.610Z",
+      "ts": "2026-01-06T02:56:55.275Z",
       "selector": "div.card.mb-0 > div.card-body > div.mb-3:nth-of-type(4) > button.btn.btn-custom-theme",
       "text": "Sign in",
       "tag": "button",
@@ -19,36 +19,7 @@
     {
       "type": "navigation",
       "url": "http://localhost/unhan-kaporlap/dashboard_admin",
-      "ts": "2026-01-06T02:55:38.579Z"
-    },
-    {
-      "type": "click",
-      "ts": "2026-01-06T02:55:42.209Z",
-      "selector": "div.collapse.show:nth-of-type(2) > ul.nav.nav-sidebar > li.nav-item.nav-item-submenu:nth-of-type(2) > a.nav-link",
-      "text": "Master",
-      "tag": "a",
-      "url": "http://localhost/unhan-kaporlap/dashboard_admin"
-    },
-    {
-      "type": "click",
-      "ts": "2026-01-06T02:55:43.046Z",
-      "selector": "li.nav-item.nav-item-submenu:nth-of-type(2) > ul.nav-group-sub.collapse > li.nav-item.nav-item-submenu:nth-of-type(1) > a.nav-link",
-      "text": "Kapor",
-      "tag": "a",
-      "url": "http://localhost/unhan-kaporlap/dashboard_admin"
-    },
-    {
-      "type": "click",
-      "ts": "2026-01-06T02:55:43.979Z",
-      "selector": "ul.nav-group-sub.collapse > li.nav-item:nth-of-type(1) > a.nav-link > span",
-      "text": "Kapor Item",
-      "tag": "span",
-      "url": "http://localhost/unhan-kaporlap/dashboard_admin"
-    },
-    {
-      "type": "navigation",
-      "url": "http://localhost/unhan-kaporlap/kapor_item",
-      "ts": "2026-01-06T02:55:44.261Z"
+      "ts": "2026-01-06T02:56:55.615Z"
     }
   ]
 }
