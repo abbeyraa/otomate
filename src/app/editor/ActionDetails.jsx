@@ -87,31 +87,17 @@ export function ActionDetails({ selectedStepData, onChange }) {
       );
     case "Wait":
       return (
-        <div className="space-y-4">
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-2">
-              Selector Opsional
-            </label>
-            <input
-              type="text"
-              placeholder=".loading"
-              value={selectedStepData.selector}
-              onChange={(event) => onChange("selector", event.target.value)}
-              className="w-full rounded-lg border border-[#e5e5e5] px-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-2">
-              Durasi (ms)
-            </label>
-            <input
-              type="number"
-              placeholder="1000"
-              value={selectedStepData.waitMs}
-              onChange={(event) => onChange("waitMs", event.target.value)}
-              className="w-full rounded-lg border border-[#e5e5e5] px-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-2">
+            Durasi (ms)
+          </label>
+          <input
+            type="number"
+            placeholder="1000"
+            value={selectedStepData.waitMs}
+            onChange={(event) => onChange("waitMs", event.target.value)}
+            className="w-full rounded-lg border border-[#e5e5e5] px-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
         </div>
       );
     case "Navigate":

@@ -21,9 +21,11 @@ export function useEditorHandlers() {
   const [targetUrl, setTargetUrl] = useState("");
   const [hasInspected, setHasInspected] = useState(false);
   const [isInspecting, setIsInspecting] = useState(false);
+  const [isRunning, setIsRunning] = useState(false);
   const [logsOpen, setLogsOpen] = useState(false);
   const [logsContent, setLogsContent] = useState("");
   const [inspectError, setInspectError] = useState("");
+  const [runError, setRunError] = useState("");
 
   const selectedGroup = groups.find(
     (group) => group.id === selectedStep.groupId
@@ -202,6 +204,7 @@ export function useEditorHandlers() {
   const runInspect = async () => {
     setIsInspecting(true);
     setInspectError("");
+    setRunError("");
     setLogsOpen(false);
     try {
       const response = await fetch("/api/inspect", {
@@ -237,6 +240,29 @@ export function useEditorHandlers() {
 
   const closeLogs = () => setLogsOpen(false);
 
+  const runSteps = async () => {
+    setIsRunning(true);
+    setRunError("");
+    setInspectError("");
+    setLogsOpen(false);
+    try {
+      const response = await fetch("/api/run", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ targetUrl, groups }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || "Run failed");
+      }
+      setHasInspected(true);
+    } catch (error) {
+      setRunError(error.message || "Run failed");
+    } finally {
+      setIsRunning(false);
+    }
+  };
+
   return {
     groups,
     selectedStep,
@@ -248,9 +274,11 @@ export function useEditorHandlers() {
     setTargetUrl,
     hasInspected,
     isInspecting,
+    isRunning,
     logsOpen,
     logsContent,
     inspectError,
+    runError,
     selectedStepData,
     handleSelectStep,
     handleAddGroup,
@@ -267,6 +295,7 @@ export function useEditorHandlers() {
     handleGroupDragEnd,
     handleGroupDrop,
     runInspect,
+    runSteps,
     loadLogs,
     closeLogs,
   };

@@ -25,9 +25,11 @@ export default function EditorPage() {
     setTargetUrl,
     hasInspected,
     isInspecting,
+    isRunning,
     logsOpen,
     logsContent,
     inspectError,
+    runError,
     selectedStepData,
     handleSelectStep,
     handleAddGroup,
@@ -44,6 +46,7 @@ export default function EditorPage() {
     handleGroupDragEnd,
     handleGroupDrop,
     runInspect,
+    runSteps,
     loadLogs,
     closeLogs,
   } = useEditorHandlers();
@@ -87,10 +90,10 @@ export default function EditorPage() {
             </button>
             <button
               type="button"
-              disabled={!hasInspected || isInspecting}
+              disabled={!hasInspected || isInspecting || isRunning}
               onClick={loadLogs}
               className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium border border-[#e5e5e5] rounded-lg ${
-                hasInspected && !isInspecting
+                hasInspected && !isInspecting && !isRunning
                   ? "bg-blue-50 text-blue-700 hover:bg-blue-100"
                   : "bg-blue-50 text-blue-300 cursor-not-allowed"
               }`}
@@ -99,15 +102,26 @@ export default function EditorPage() {
             </button>
             <button
               type="button"
-              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700"
+              onClick={runSteps}
+              disabled={isRunning || isInspecting}
+              className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg ${
+                isRunning || isInspecting
+                  ? "bg-blue-200 text-white cursor-not-allowed"
+                  : "bg-blue-600 text-white hover:bg-blue-700"
+              }`}
             >
               <PlayCircle className="w-4 h-4" />
-              Jalankan
+              {isRunning ? "Running..." : "Jalankan"}
             </button>
           </div>
           {inspectError && (
             <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
               {inspectError}
+            </div>
+          )}
+          {runError && (
+            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {runError}
             </div>
           )}
           {logsOpen && (

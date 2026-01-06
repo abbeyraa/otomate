@@ -1,25 +1,38 @@
 {
-  "startedAt": "2026-01-06T02:56:50.354Z",
-  "endedAt": "2026-01-06T02:56:59.080Z",
+  "type": "run",
+  "startedAt": "2026-01-06T03:08:30.799Z",
+  "endedAt": "2026-01-06T03:08:39.030Z",
   "targetUrl": "http://localhost/unhan-kaporlap/auth/login",
-  "events": [
+  "status": "failed",
+  "error": {
+    "message": "page.fill: Target page, context or browser has been closed\nCall log:\n\u001b[2m  - waiting for locator('#Username')\u001b[22m\n",
+    "group": "Access",
+    "step": "Isi Kredensial"
+  },
+  "steps": [
     {
-      "type": "navigation",
-      "url": "http://localhost/unhan-kaporlap/auth/login",
-      "ts": "2026-01-06T02:56:50.832Z"
+      "group": "system",
+      "step": "Target URL",
+      "action": "Navigate",
+      "status": "success",
+      "ts": "2026-01-06T03:08:31.270Z"
     },
     {
-      "type": "click",
-      "ts": "2026-01-06T02:56:55.275Z",
-      "selector": "div.card.mb-0 > div.card-body > div.mb-3:nth-of-type(4) > button.btn.btn-custom-theme",
-      "text": "Sign in",
-      "tag": "button",
-      "url": "http://localhost/unhan-kaporlap/auth/login"
+      "group": "Access",
+      "step": "Buka Halaman Login",
+      "action": "Navigate",
+      "selector": "",
+      "status": "success",
+      "ts": "2026-01-06T03:08:31.270Z"
     },
     {
-      "type": "navigation",
-      "url": "http://localhost/unhan-kaporlap/dashboard_admin",
-      "ts": "2026-01-06T02:56:55.615Z"
+      "group": "Access",
+      "step": "Isi Kredensial",
+      "action": "Input",
+      "selector": "#Username",
+      "status": "failed",
+      "ts": "2026-01-06T03:08:31.325Z",
+      "error": "page.fill: Target page, context or browser has been closed\nCall log:\n\u001b[2m  - waiting for locator('#Username')\u001b[22m\n"
     }
   ]
 }
