@@ -9,6 +9,12 @@ OtoMate is a web automation builder for internal workflows. It lets you design s
 - Runner that executes steps in a real browser and stops on failure
 - Action types: click, input, wait, navigate
 
+## Todo
+
+- [ ] Save as a template.
+- [ ] Add data mapping (CSV/XLSX).
+- [ ] Location permission (user's location not virtual).
+
 ## Installation
 
 Prerequisites: Node.js 18+
