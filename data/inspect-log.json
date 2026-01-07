@@ -1,13 +1,13 @@
 {
   "schemaVersion": 1,
-  "runId": "inspect-1767764054694",
-  "startedAt": "2026-01-07T05:34:14.694Z",
-  "endedAt": "2026-01-07T05:34:27.728Z",
+  "runId": "inspect-1767764199048",
+  "startedAt": "2026-01-07T05:36:39.048Z",
+  "endedAt": "2026-01-07T05:36:47.687Z",
   "targetUrl": "http://localhost:3001/login",
   "events": [
     {
       "id": "evt-1",
-      "ts": "2026-01-07T05:34:15.399Z",
+      "ts": "2026-01-07T05:36:39.480Z",
       "level": "info",
       "type": "navigation",
       "message": "Navigated to http://localhost:3001/login",
@@ -17,17 +17,7 @@
     },
     {
       "id": "evt-2",
-      "ts": "2026-01-07T05:34:15.828Z",
-      "level": "info",
-      "type": "navigation",
-      "message": "Navigated to http://localhost:3001/login",
-      "data": {
-        "url": "http://localhost:3001/login"
-      }
-    },
-    {
-      "id": "evt-3",
-      "ts": "2026-01-07T05:34:20.750Z",
+      "ts": "2026-01-07T05:36:41.548Z",
       "level": "info",
       "type": "interaction.click",
       "message": "Click input",
@@ -40,8 +30,8 @@
       }
     },
     {
-      "id": "evt-4",
-      "ts": "2026-01-07T05:34:22.665Z",
+      "id": "evt-3",
+      "ts": "2026-01-07T05:36:42.808Z",
       "level": "info",
       "type": "interaction.click",
       "message": "Click input",
@@ -54,8 +44,8 @@
       }
     },
     {
-      "id": "evt-5",
-      "ts": "2026-01-07T05:34:24.108Z",
+      "id": "evt-4",
+      "ts": "2026-01-07T05:36:43.610Z",
       "level": "info",
       "type": "interaction.click",
       "message": "Click button",
@@ -68,8 +58,8 @@
       }
     },
     {
-      "id": "evt-6",
-      "ts": "2026-01-07T05:34:25.791Z",
+      "id": "evt-5",
+      "ts": "2026-01-07T05:36:45.292Z",
       "level": "info",
       "type": "navigation",
       "message": "Navigated to http://localhost:3001/dashboard",

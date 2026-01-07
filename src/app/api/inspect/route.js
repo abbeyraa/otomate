@@ -38,19 +38,23 @@ export async function POST(request) {
   const context = await browser.newContext();
   const page = await context.newPage();
 
+  let lastNavigationUrl = "";
   page.on("framenavigated", (frame) => {
-    if (frame === page.mainFrame()) {
-      events.push({
-        id: `evt-${events.length + 1}`,
-        ts: new Date().toISOString(),
-        level: "info",
-        type: "navigation",
-        message: `Navigated to ${frame.url()}`,
-        data: {
-          url: frame.url(),
-        },
-      });
-    }
+    if (frame !== page.mainFrame()) return;
+    const url = frame.url();
+    if (!url || url === "about:blank") return;
+    if (url === lastNavigationUrl) return;
+    lastNavigationUrl = url;
+    events.push({
+      id: `evt-${events.length + 1}`,
+      ts: new Date().toISOString(),
+      level: "info",
+      type: "navigation",
+      message: `Navigated to ${url}`,
+      data: {
+        url,
+      },
+    });
   });
 
   const pushEvent = (event) => {
