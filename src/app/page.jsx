@@ -1,3 +1,7 @@
+export const metadata = {
+  title: "OtoMate - Automation Builder",
+};
+
 export default function HomePage() {
   return (
     <div className="h-full flex items-center justify-center p-8">
