@@ -11,7 +11,7 @@ OtoMate is a web automation builder for internal workflows. It lets you design s
 
 ## Todo
 
-- [✓] Save as a template.
+- [x] Save as a template.
 - [ ] Add data mapping (CSV/XLSX).
 - [ ] Location permission (user's location not virtual).
 
