@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useEditorHandlers } from "./useEditorHandlers";
 import { saveTemplate } from "../template/templateStorage";
 import {
@@ -13,6 +13,9 @@ import {
   Trash2,
   FolderPlus,
   User,
+  MousePointer2,
+  ChevronsDown,
+  ChevronsUp,
 } from "lucide-react";
 import { ActionDetails, actionTypes } from "./ActionDetails";
 import { stepTemplates } from "./stepTemplates";
@@ -20,6 +23,8 @@ import { stepTemplates } from "./stepTemplates";
 export default function EditorPage() {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showSaveConfirm, setShowSaveConfirm] = useState(false);
+  const [detailFlash, setDetailFlash] = useState(false);
+  const [showGroupToast, setShowGroupToast] = useState(false);
   const {
     groups,
     selectedStep,
@@ -39,10 +44,14 @@ export default function EditorPage() {
     inspectError,
     runError,
     selectedStepData,
+    lastAddedGroupId,
     handleSelectStep,
+    handleClearSelection,
     handleAddGroup,
     handleDeleteGroup,
     handleToggleGroup,
+    handleExpandAllGroups,
+    handleCollapseAllGroups,
     handleAddStep,
     handleDeleteStep,
     handleStepChange,
@@ -60,103 +69,141 @@ export default function EditorPage() {
     resetEditor,
   } = useEditorHandlers();
 
+  const selectedGroup = groups.find(
+    (group) => group.id === selectedStep.groupId
+  );
+  const detailTitle =
+    selectedGroup && selectedStepData
+      ? `Detail > ${selectedGroup.name} > ${selectedStepData.title}`
+      : "Detail";
+
+  useEffect(() => {
+    if (!selectedStepData) return;
+    setDetailFlash(true);
+    const timer = setTimeout(() => setDetailFlash(false), 500);
+    return () => clearTimeout(timer);
+  }, [selectedStep.groupId, selectedStep.stepId, selectedStepData]);
+
+  useEffect(() => {
+    if (!showGroupToast) return;
+    const timer = setTimeout(() => setShowGroupToast(false), 1200);
+    return () => clearTimeout(timer);
+  }, [showGroupToast]);
+
+  const detailKey = `${selectedStep.groupId}-${selectedStep.stepId}`;
+
   return (
     <div className="h-full flex flex-col">
-      <div className="flex-1 overflow-y-auto p-8">
+      <div
+        className="flex-1 overflow-y-auto p-8"
+        onClick={(event) => {
+          if (event.target !== event.currentTarget) return;
+          handleClearSelection();
+        }}
+      >
         <div className="max-w-7xl mx-auto space-y-8">
-          <div className="flex flex-wrap items-center justify-end gap-3">
-            <div className="flex items-center gap-2">
-              <label className="text-xs font-medium text-gray-500">
-                Template Name
-              </label>
-              <input
-                type="text"
-                placeholder="Template Name"
-                value={templateName}
-                onChange={(event) => setTemplateName(event.target.value)}
-                className="w-56 rounded-lg border border-[#e5e5e5] px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-2">
+                <label className="text-xs font-medium text-gray-500">
+                  Template Name
+                </label>
+                <input
+                  type="text"
+                  placeholder="Template Name"
+                  value={templateName}
+                  onChange={(event) => setTemplateName(event.target.value)}
+                  className="w-56 rounded-lg border border-[#e5e5e5] px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <button
+                type="button"
+                disabled={isInspecting || isRunning}
+                onClick={() => {
+                  const template = {
+                    id: `template-${Date.now()}`,
+                    name:
+                      templateName?.trim() ||
+                      new Date().toLocaleString("id-ID"),
+                    createdAt: new Date().toISOString(),
+                    targetUrl,
+                    groups,
+                  };
+                  saveTemplate(template);
+                  setShowSaveConfirm(true);
+                }}
+                className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium border rounded-lg ${
+                  isInspecting || isRunning
+                    ? "border-green-100 bg-green-50 text-green-300 cursor-not-allowed"
+                    : "border-green-200 bg-green-100 text-green-700 hover:bg-green-200"
+                }`}
+              >
+                <FileText className="w-4 h-4" />
+                Simpan
+              </button>
             </div>
-            <div className="flex items-center gap-2">
-              <label className="text-xs font-medium text-gray-500">
-                Target URL
-              </label>
-              <input
-                type="text"
-                placeholder="https://contoh.app"
-                value={targetUrl}
-                onChange={(event) => setTargetUrl(event.target.value)}
-                className="w-64 rounded-lg border border-[#e5e5e5] px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-2">
+                <label className="text-xs font-medium text-gray-500">
+                  Inspect URL
+                </label>
+                <input
+                  type="text"
+                  placeholder="https://contoh.app"
+                  value={targetUrl}
+                  onChange={(event) => setTargetUrl(event.target.value)}
+                  className="w-64 rounded-lg border border-[#e5e5e5] px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={runInspect}
+                disabled={isInspecting}
+                className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium border border-[#e5e5e5] rounded-lg ${
+                  isInspecting
+                    ? "bg-amber-100 text-amber-400 cursor-not-allowed"
+                    : "bg-amber-200 text-amber-900 hover:bg-amber-300"
+                }`}
+              >
+                {isInspecting ? "Inspecting..." : "Inspect"}
+              </button>
+              <button
+                type="button"
+                disabled={!hasInspected || isInspecting || isRunning}
+                onClick={loadLogs}
+                className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium border border-[#e5e5e5] rounded-lg ${
+                  hasInspected && !isInspecting && !isRunning
+                    ? "bg-blue-50 text-blue-700 hover:bg-blue-100"
+                    : "bg-blue-50 text-blue-300 cursor-not-allowed"
+                }`}
+              >
+                Logs
+              </button>
             </div>
-            <button
-              type="button"
-              disabled={isInspecting || isRunning}
-              onClick={() => {
-                const template = {
-                  id: `template-${Date.now()}`,
-                  name:
-                    templateName?.trim() || new Date().toLocaleString("id-ID"),
-                  createdAt: new Date().toISOString(),
-                  targetUrl,
-                  groups,
-                };
-                saveTemplate(template);
-                setShowSaveConfirm(true);
-              }}
-              className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium border rounded-lg ${
-                isInspecting || isRunning
-                  ? "border-green-100 bg-green-50 text-green-300 cursor-not-allowed"
-                  : "border-green-200 bg-green-100 text-green-700 hover:bg-green-200"
-              }`}
-            >
-              <FileText className="w-4 h-4" />
-              Simpan
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowResetConfirm(true)}
-              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium border border-red-200 rounded-lg bg-red-50 text-red-700 hover:bg-red-100"
-            >
-              Reset
-            </button>
-            <button
-              type="button"
-              onClick={runInspect}
-              disabled={isInspecting}
-              className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium border border-[#e5e5e5] rounded-lg ${
-                isInspecting
-                  ? "bg-amber-100 text-amber-400 cursor-not-allowed"
-                  : "bg-amber-200 text-amber-900 hover:bg-amber-300"
-              }`}
-            >
-              {isInspecting ? "Inspecting..." : "Inspect"}
-            </button>
-            <button
-              type="button"
-              disabled={!hasInspected || isInspecting || isRunning}
-              onClick={loadLogs}
-              className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium border border-[#e5e5e5] rounded-lg ${
-                hasInspected && !isInspecting && !isRunning
-                  ? "bg-blue-50 text-blue-700 hover:bg-blue-100"
-                  : "bg-blue-50 text-blue-300 cursor-not-allowed"
-              }`}
-            >
-              Logs
-            </button>
-            <button
-              type="button"
-              onClick={runSteps}
-              disabled={isRunning || isInspecting}
-              className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg ${
-                isRunning || isInspecting
-                  ? "bg-blue-200 text-white cursor-not-allowed"
-                  : "bg-blue-600 text-white hover:bg-blue-700"
-              }`}
-            >
-              <PlayCircle className="w-4 h-4" />
-              {isRunning ? "Running..." : "Jalankan"}
-            </button>
+
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setShowResetConfirm(true)}
+                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium border border-red-200 rounded-lg bg-red-50 text-red-700 hover:bg-red-100"
+              >
+                Reset
+              </button>
+              <button
+                type="button"
+                onClick={runSteps}
+                disabled={isRunning || isInspecting}
+                className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg ${
+                  isRunning || isInspecting
+                    ? "bg-blue-200 text-white cursor-not-allowed"
+                    : "bg-blue-600 text-white hover:bg-blue-700"
+                }`}
+              >
+                <PlayCircle className="w-4 h-4" />
+                {isRunning ? "Running..." : "Jalankan"}
+              </button>
+            </div>
           </div>
           {inspectError && (
             <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -286,14 +333,45 @@ export default function EditorPage() {
                     Kelola langkah dalam sub menu
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={handleAddGroup}
-                  className="inline-flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100"
-                >
-                  <FolderPlus className="w-4 h-4" />
-                  Add Sub Menu
-                </button>
+                <div className="relative flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleExpandAllGroups}
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[#e5e5e5] bg-white text-gray-500 hover:bg-gray-50"
+                    title="Expand all"
+                    aria-label="Expand all"
+                  >
+                    <ChevronsDown className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCollapseAllGroups}
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[#e5e5e5] bg-white text-gray-500 hover:bg-gray-50"
+                    title="Collapse all"
+                    aria-label="Collapse all"
+                  >
+                    <ChevronsUp className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleAddGroup();
+                      setShowGroupToast(true);
+                    }}
+                    disabled={showGroupToast}
+                    className="inline-flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100"
+                  >
+                    <FolderPlus className="w-4 h-4" />
+                    Add Group
+                  </button>
+                  {showGroupToast && (
+                    <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-white/80 px-2 backdrop-blur-sm">
+                      <div className="rounded-md border border-blue-100 bg-blue-50 px-3 py-2 text-[11px] font-semibold text-blue-700 shadow-sm toast-pop">
+                        Group berhasil ditambahkan
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
               <div className="divide-y divide-[#e5e5e5]">
                 {groups.map((group) => (
@@ -305,7 +383,7 @@ export default function EditorPage() {
                     <div
                       className={`px-6 py-4 bg-gray-50 flex items-center justify-between ${
                         draggedGroupSectionId === group.id ? "bg-blue-50" : ""
-                      }`}
+                      } ${lastAddedGroupId === group.id ? "group-added" : ""}`}
                     >
                       <div className="flex items-center gap-3">
                         <button
@@ -354,74 +432,94 @@ export default function EditorPage() {
                       </div>
                     </div>
                     {openGroups[group.id] && (
-                      <div className="divide-y divide-[#e5e5e5]">
-                        {group.steps.map((step) => (
-                          <div
-                            key={step.id}
-                            onClick={() => handleSelectStep(group.id, step.id)}
-                            onDragStart={(event) =>
-                              handleDragStart(event, group.id, step.id)
-                            }
-                            onDragOver={(event) => event.preventDefault()}
-                            onDrop={(event) =>
-                              handleDrop(event, group.id, step.id)
-                            }
-                            onDragEnd={handleStepDragEnd}
-                            draggable
-                            role="button"
-                            tabIndex={0}
-                            className={`w-full text-left px-6 py-4 transition-colors cursor-pointer ${
+                      <div className="ml-6 border-l border-dashed border-[#e5e5e5]">
+                        <div className="px-6 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-400">
+                          Steps
+                        </div>
+                        <div className="divide-y divide-[#e5e5e5]">
+                          {group.steps.map((step) => {
+                            const isSelected =
                               selectedStep.groupId === group.id &&
-                              selectedStep.stepId === step.id
-                                ? "bg-blue-50"
-                                : "hover:bg-gray-50"
-                            }`}
-                          >
-                            <div className="flex items-start gap-4">
-                              <span
-                                className={`mt-0.5 inline-flex h-8 w-8 items-center justify-center rounded-md border ${
-                                  draggedStepId === step.id &&
-                                  draggedGroupId === group.id
-                                    ? "border-blue-200 bg-blue-100 text-blue-700"
-                                    : "border-[#e5e5e5] bg-white text-gray-400"
-                                }`}
-                              >
-                                <GripVertical className="h-4 w-4" />
-                              </span>
-                              <div className="flex-1">
-                                <p className="text-sm font-semibold text-gray-900">
-                                  {step.title}
-                                </p>
-                                <p className="text-xs text-gray-500 mt-1">
-                                  {step.description}
-                                </p>
-                              </div>
-                              <span className="text-[11px] px-2 py-1 rounded-full bg-gray-100 text-gray-600">
-                                {step.type}
-                              </span>
-                              <button
-                                type="button"
-                                aria-label="Delete step"
+                              selectedStep.stepId === step.id;
+                            return (
+                              <div
+                                key={step.id}
                                 onClick={(event) => {
                                   event.stopPropagation();
-                                  handleDeleteStep(group.id, step.id);
+                                  handleSelectStep(group.id, step.id);
                                 }}
-                                className="inline-flex h-7 w-7 items-center justify-center rounded-md text-red-600 hover:text-red-700 hover:bg-red-50"
+                                onDragStart={(event) =>
+                                  handleDragStart(event, group.id, step.id)
+                                }
+                                onDragOver={(event) => event.preventDefault()}
+                                onDrop={(event) =>
+                                  handleDrop(event, group.id, step.id)
+                                }
+                                onDragEnd={handleStepDragEnd}
+                                draggable
+                                role="button"
+                                tabIndex={0}
+                                data-step-row="true"
+                                className={`relative w-full text-left pl-6 pr-6 py-4 transition-colors cursor-pointer rounded-md ${
+                                  isSelected
+                                    ? "bg-blue-50 ring-1 ring-blue-200"
+                                    : "hover:bg-gray-50"
+                                }`}
                               >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
-                            </div>
+                                <span
+                                  className={`absolute left-0 top-3 bottom-3 w-1 rounded-r bg-blue-500 origin-center transition-transform duration-200 ease-out ${
+                                    isSelected
+                                      ? "scale-y-100 opacity-100"
+                                      : "scale-y-0 opacity-0"
+                                  }`}
+                                />
+                                <div className="flex items-start gap-4">
+                                  <span
+                                    className={`mt-0.5 inline-flex h-8 w-8 items-center justify-center rounded-md border ${
+                                      draggedStepId === step.id &&
+                                      draggedGroupId === group.id
+                                        ? "border-blue-200 bg-blue-100 text-blue-700"
+                                        : "border-[#e5e5e5] bg-white text-gray-400"
+                                    }`}
+                                  >
+                                    <GripVertical className="h-4 w-4" />
+                                  </span>
+                                  <div className="flex-1">
+                                    <p className="text-sm font-semibold text-gray-900">
+                                      {step.title}
+                                    </p>
+                                    <p className="text-xs text-gray-500 mt-1">
+                                      {step.description}
+                                    </p>
+                                  </div>
+                                  <span className="text-[11px] px-2 py-1 rounded-full bg-gray-100 text-gray-600">
+                                    {step.type}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    aria-label="Delete step"
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      handleDeleteStep(group.id, step.id);
+                                    }}
+                                    className="inline-flex h-7 w-7 items-center justify-center rounded-md text-red-600 hover:text-red-700 hover:bg-red-50"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                          <div className="pl-6 pr-6 py-4">
+                            <button
+                              type="button"
+                              className="inline-flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100"
+                              onClick={() => handleAddStep(group.id)}
+                            >
+                              <FilePlus className="w-4 h-4" />
+                              Add Step
+                            </button>
                           </div>
-                        ))}
-                        <div className="px-6 py-4">
-                          <button
-                            type="button"
-                            className="inline-flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100"
-                            onClick={() => handleAddStep(group.id)}
-                          >
-                            <FilePlus className="w-4 h-4" />
-                            Add Step
-                          </button>
                         </div>
                       </div>
                     )}
@@ -431,97 +529,195 @@ export default function EditorPage() {
             </section>
 
             <section className="space-y-6">
-              <div className="bg-white border border-[#e5e5e5] rounded-lg p-6">
-                <h2 className="text-base font-semibold text-gray-900">
-                  Step Details
+              <div
+                className={`bg-white border border-[#e5e5e5] rounded-lg p-6 transition-[box-shadow,border-color] duration-300 ${
+                  detailFlash ? "border-blue-200 shadow-lg detail-flash" : ""
+                }`}
+              >
+                <h2
+                  key={detailTitle}
+                  className="text-base font-semibold text-gray-900 detail-title"
+                >
+                  {detailTitle}
                 </h2>
                 <p className="text-xs text-gray-500 mt-1">
                   Input atau informasi yang dibutuhkan untuk langkah terpilih
                 </p>
-                <div className="mt-5 space-y-4">
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-2">
-                      Nama Step
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="Isi Kredensial"
-                      value={selectedStepData?.title || ""}
-                      onChange={(event) =>
-                        handleStepChange(
-                          selectedStep.groupId,
-                          selectedStep.stepId,
-                          "title",
-                          event.target.value
-                        )
-                      }
-                      disabled={!selectedStepData}
-                      className="w-full rounded-lg border border-[#e5e5e5] px-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
+                {selectedStepData ? (
+                  <div key={detailKey} className="mt-5 space-y-4 detail-content">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-2">
+                        Nama Step
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Isi Kredensial"
+                        value={selectedStepData?.title || ""}
+                        onChange={(event) =>
+                          handleStepChange(
+                            selectedStep.groupId,
+                            selectedStep.stepId,
+                            "title",
+                            event.target.value
+                          )
+                        }
+                        className="w-full rounded-lg border border-[#e5e5e5] px-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-2">
+                        Deskripsi
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Jelaskan kebutuhan step ini"
+                        value={selectedStepData?.description || ""}
+                        onChange={(event) =>
+                          handleStepChange(
+                            selectedStep.groupId,
+                            selectedStep.stepId,
+                            "description",
+                            event.target.value
+                          )
+                        }
+                        className="w-full rounded-lg border border-[#e5e5e5] px-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-2">
+                        Tipe Aksi
+                      </label>
+                      <select
+                        value={selectedStepData?.type || actionTypes[0]}
+                        onChange={(event) =>
+                          handleStepChange(
+                            selectedStep.groupId,
+                            selectedStep.stepId,
+                            "type",
+                            event.target.value
+                          )
+                        }
+                        className="w-full rounded-lg border border-[#e5e5e5] px-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        {actionTypes.map((type) => (
+                          <option key={type} value={type}>
+                            {type}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="space-y-4">
+                      <ActionDetails
+                        selectedStepData={selectedStepData}
+                        onChange={(key, value) =>
+                          handleStepChange(
+                            selectedStep.groupId,
+                            selectedStep.stepId,
+                            key,
+                            value
+                          )
+                        }
+                      />
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-2">
-                      Deskripsi
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="Jelaskan kebutuhan step ini"
-                      value={selectedStepData?.description || ""}
-                      onChange={(event) =>
-                        handleStepChange(
-                          selectedStep.groupId,
-                          selectedStep.stepId,
-                          "description",
-                          event.target.value
-                        )
-                      }
-                      disabled={!selectedStepData}
-                      className="w-full rounded-lg border border-[#e5e5e5] px-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
+                ) : (
+                  <div className="mt-6 rounded-lg border border-dashed border-[#e5e5e5] bg-gray-50 px-5 py-6 text-center detail-content">
+                    <div className="mx-auto mb-3 inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-gray-400 shadow-sm">
+                      <MousePointer2 className="h-5 w-5" />
+                    </div>
+                    <p className="text-sm font-semibold text-gray-800">
+                      Belum ada step yang dipilih
+                    </p>
+                    <p className="mt-2 text-xs text-gray-500">
+                      Pilih step di panel kiri untuk mengedit detailnya.
+                    </p>
                   </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-2">
-                      Tipe Aksi
-                    </label>
-                    <select
-                      value={selectedStepData?.type || actionTypes[0]}
-                      onChange={(event) =>
-                        handleStepChange(
-                          selectedStep.groupId,
-                          selectedStep.stepId,
-                          "type",
-                          event.target.value
-                        )
-                      }
-                      disabled={!selectedStepData}
-                      className="w-full rounded-lg border border-[#e5e5e5] px-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      {actionTypes.map((type) => (
-                        <option key={type} value={type}>
-                          {type}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="space-y-4">
-                    <ActionDetails
-                      selectedStepData={selectedStepData}
-                      onChange={(key, value) =>
-                        handleStepChange(
-                          selectedStep.groupId,
-                          selectedStep.stepId,
-                          key,
-                          value
-                        )
-                      }
-                    />
-                  </div>
-                </div>
+                )}
               </div>
             </section>
           </div>
         </div>
       </div>
+      <style jsx>{`
+        @keyframes detailFlash {
+          0% {
+            background-color: #eff6ff;
+            box-shadow: 0 12px 24px -16px rgba(59, 130, 246, 0.6);
+          }
+          100% {
+            background-color: #ffffff;
+            box-shadow: none;
+          }
+        }
+
+        .detail-flash {
+          animation: detailFlash 500ms ease-out;
+        }
+
+        @keyframes detailSlide {
+          from {
+            opacity: 0;
+            transform: translateY(6px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        .detail-content {
+          animation: detailSlide 220ms ease-out;
+        }
+
+        .detail-title {
+          animation: detailFade 200ms ease-out;
+        }
+
+        @keyframes detailFade {
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
+        }
+
+        @keyframes groupFlash {
+          0% {
+            background-color: #dbeafe;
+          }
+          100% {
+            background-color: #f9fafb;
+          }
+        }
+
+        .group-added {
+          animation: groupFlash 700ms ease-out;
+        }
+
+        @keyframes toastPop {
+          0% {
+            opacity: 0;
+            transform: translateY(-6px);
+          }
+          15% {
+            opacity: 1;
+            transform: translateY(0);
+          }
+          85% {
+            opacity: 1;
+            transform: translateY(0);
+          }
+          100% {
+            opacity: 0;
+            transform: translateY(-6px);
+          }
+        }
+
+        .toast-pop {
+          animation: toastPop 1.2s ease-out;
+        }
+      `}</style>
     </div>
   );
 }
