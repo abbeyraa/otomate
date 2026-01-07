@@ -93,6 +93,10 @@ export function useEditorHandlers() {
     setSelectedStep({ groupId, stepId });
   };
 
+  const handleClearSelection = () => {
+    setSelectedStep({ groupId: "", stepId: "" });
+  };
+
   const handleAddGroup = () => {
     const newGroupId = `group-${Date.now()}`;
     const newGroup = {
@@ -371,6 +375,7 @@ export function useEditorHandlers() {
     runError,
     selectedStepData,
     handleSelectStep,
+    handleClearSelection,
     handleAddGroup,
     handleDeleteGroup,
     handleToggleGroup,
