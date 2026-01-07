@@ -7,6 +7,8 @@ export default function SettingsPage() {
   const [settings, setSettings] = useState({
     language: "id",
   });
+  const [isResetting, setIsResetting] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   const handleToggle = (key) => {
     const newSettings = {
@@ -24,6 +26,39 @@ export default function SettingsPage() {
     setSettings(newSettings);
   };
 
+  const handleResetData = async () => {
+    if (isResetting) return;
+    setIsResetting(true);
+    try {
+      localStorage.clear();
+      sessionStorage.clear();
+
+      if (typeof indexedDB?.databases === "function") {
+        const databases = await indexedDB.databases();
+        await Promise.all(
+          databases.map((db) => {
+            if (!db?.name) return null;
+            return new Promise((resolve) => {
+              const request = indexedDB.deleteDatabase(db.name);
+              request.onsuccess = () => resolve();
+              request.onerror = () => resolve();
+              request.onblocked = () => resolve();
+            });
+          })
+        );
+      }
+
+      if (typeof caches?.keys === "function") {
+        const cacheKeys = await caches.keys();
+        await Promise.all(cacheKeys.map((key) => caches.delete(key)));
+      }
+
+      window.location.reload();
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
   const settingSections = [
     {
       title: "General",
@@ -38,6 +73,14 @@ export default function SettingsPage() {
             { value: "id", label: "Bahasa Indonesia" },
             { value: "en", label: "English" },
           ],
+        },
+        {
+          key: "reset-data",
+          label: isResetting ? "Resetting..." : "Reset Data",
+          description: "Hapus cache, storage, dan data template tersimpan",
+          type: "button",
+          action: () => setShowResetConfirm(true),
+          disabled: isResetting,
         },
       ],
     },
@@ -134,7 +177,12 @@ export default function SettingsPage() {
                         {setting.type === "button" && (
                           <button
                             onClick={setting.action}
-                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                            disabled={setting.disabled}
+                            className={`px-4 py-2 rounded-lg transition-colors text-sm font-medium ${
+                              setting.disabled
+                                ? "bg-blue-200 text-white cursor-not-allowed"
+                                : "bg-blue-600 text-white hover:bg-blue-700"
+                            }`}
                           >
                             {setting.label}
                           </button>
@@ -148,6 +196,39 @@ export default function SettingsPage() {
           })}
         </div>
       </div>
+      {showResetConfirm && (
+        <div className="fixed inset-0 z-50 flex h-screen w-screen items-center justify-center bg-black/40 backdrop-blur-[1px] p-4">
+          <div className="w-full max-w-md rounded-xl bg-white shadow-xl">
+            <div className="border-b border-[#e5e5e5] px-5 py-4">
+              <h3 className="text-sm font-semibold text-gray-900">
+                Reset Data
+              </h3>
+              <p className="text-xs text-gray-500 mt-1">
+                Semua cache, storage, dan data template akan dihapus permanen.
+              </p>
+            </div>
+            <div className="px-5 py-4 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setShowResetConfirm(false)}
+                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium border border-[#e5e5e5] rounded-lg bg-white text-gray-700 hover:bg-gray-50"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowResetConfirm(false);
+                  handleResetData();
+                }}
+                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-red-600 text-white hover:bg-red-700"
+              >
+                Reset
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

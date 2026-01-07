@@ -8,6 +8,13 @@ const jetBrainsMono = JetBrains_Mono({
   weight: ["400", "500", "600", "700"],
 });
 
+export const metadata = {
+  title: "OtoMate",
+  icons: {
+    icon: "/logo.png",
+  },
+};
+
 export default function RootLayout({ children }) {
   return (
     <html lang="id" className="h-full">
