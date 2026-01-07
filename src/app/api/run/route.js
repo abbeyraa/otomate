@@ -17,6 +17,7 @@ async function resolveLocator(page, step) {
   const label = step.label?.trim();
   const scopeSelector = step.scopeSelector?.trim();
   const timeoutMs = Number.parseInt(step.timeoutMs, 10) || 5000;
+  const inputKind = step.inputKind || "text";
   let scope = page;
 
   if (scopeSelector) {
@@ -26,16 +27,44 @@ async function resolveLocator(page, step) {
   }
 
   const candidates = [];
+  if (step.type === "Input" && inputKind === "radio" && step.value?.trim()) {
+    const escaped = step.value.trim().replace(/["\\]/g, "\\$&");
+    candidates.push(scope.locator(`input[type="radio"][value="${escaped}"]`));
+  }
+
   if (label) {
     if (step.type === "Click") {
       candidates.push(scope.getByRole("button", { name: label }));
+      candidates.push(scope.getByRole("link", { name: label }));
+      candidates.push(scope.getByText(label, { exact: true }));
     }
     if (step.type === "Input") {
-      candidates.push(scope.getByLabel(label));
-      candidates.push(scope.getByRole("textbox", { name: label }));
+      switch (inputKind) {
+        case "checkbox":
+        case "toggle":
+          candidates.push(scope.getByRole("checkbox", { name: label }));
+          candidates.push(scope.getByRole("switch", { name: label }));
+          candidates.push(scope.getByLabel(label));
+          break;
+        case "radio":
+          candidates.push(scope.getByRole("radio", { name: label }));
+          candidates.push(scope.getByLabel(label));
+          break;
+        case "select":
+          candidates.push(scope.getByRole("combobox", { name: label }));
+          candidates.push(scope.getByLabel(label));
+          break;
+        case "number":
+          candidates.push(scope.getByRole("spinbutton", { name: label }));
+          candidates.push(scope.getByLabel(label));
+          candidates.push(scope.getByRole("textbox", { name: label }));
+          break;
+        default:
+          candidates.push(scope.getByRole("textbox", { name: label }));
+          candidates.push(scope.getByLabel(label));
+          break;
+      }
     }
-    candidates.push(scope.getByText(label, { exact: true }));
-    candidates.push(scope.getByLabel(label));
   }
 
   for (const locator of candidates) {
@@ -48,7 +77,31 @@ async function resolveLocator(page, step) {
     }
   }
 
+  if (step.type === "Input" && inputKind === "radio") {
+    throw new Error("Label or value is required");
+  }
   throw new Error("Label is required");
+}
+
+function normalizeBooleanValue(value) {
+  const normalized = String(value).trim().toLowerCase();
+  if (["true", "1", "yes", "on", "checked"].includes(normalized)) return true;
+  if (["false", "0", "no", "off", "unchecked"].includes(normalized))
+    return false;
+  return null;
+}
+
+function formatDateValue(raw, format) {
+  if (!format) return raw;
+  const parsed = new Date(raw);
+  if (Number.isNaN(parsed.getTime())) return raw;
+  const yyyy = String(parsed.getFullYear());
+  const mm = String(parsed.getMonth() + 1).padStart(2, "0");
+  const dd = String(parsed.getDate()).padStart(2, "0");
+  return format
+    .replace(/YYYY/g, yyyy)
+    .replace(/MM/g, mm)
+    .replace(/DD/g, dd);
 }
 
 export async function POST(request) {
@@ -109,9 +162,39 @@ export async function POST(request) {
                 const locator = await resolveLocator(page, step);
                 const timeoutMs = Number.parseInt(step.timeoutMs, 10) || 5000;
                 await locator.waitFor({ state: "visible", timeout: timeoutMs });
-                await locator.pressSequentially(step.value || "", {
-                  delay: 100,
-                });
+                const inputKind = step.inputKind || "text";
+                const rawValue = step.value || "";
+                if (inputKind === "checkbox" || inputKind === "toggle") {
+                  const desired = normalizeBooleanValue(rawValue);
+                  if (desired === null) {
+                    throw new Error("Checkbox value must be true or false");
+                  }
+                  if (desired) {
+                    await locator.check({ timeout: timeoutMs });
+                  } else {
+                    await locator.uncheck({ timeout: timeoutMs });
+                  }
+                  break;
+                }
+
+                if (inputKind === "select") {
+                  if (!rawValue) {
+                    throw new Error("Option value is required");
+                  }
+                  await locator.selectOption({ value: rawValue });
+                  break;
+                }
+
+                if (inputKind === "radio") {
+                  await locator.check({ timeout: timeoutMs });
+                  break;
+                }
+
+                const finalValue =
+                  inputKind === "date"
+                    ? formatDateValue(rawValue, step.dateFormat)
+                    : rawValue;
+                await locator.fill(finalValue);
               }
               break;
             case "Wait":

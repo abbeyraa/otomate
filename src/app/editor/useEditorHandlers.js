@@ -226,6 +226,8 @@ export function useEditorHandlers(templateId = "") {
       description: "Isi detail langkah ini",
       type: "Click",
       scopeSelector: "",
+      inputKind: "text",
+      dateFormat: "",
       value: "",
       label: "",
       timeoutMs: "5000",

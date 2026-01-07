@@ -8,6 +8,8 @@ export const stepTemplates = [
       description: "Masukkan username",
       type: "Input",
       scopeSelector: "",
+      inputKind: "text",
+      dateFormat: "",
       value: "root",
       label: "Username",
       timeoutMs: "5000",
