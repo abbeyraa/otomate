@@ -18,6 +18,7 @@ build/
 dist/
 .turbo/
 .swc/
+**/inspect-log.json
 # === Environment variables ===
 .env
 .env.*
