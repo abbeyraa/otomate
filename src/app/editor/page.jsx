@@ -72,99 +72,108 @@ export default function EditorPage() {
         }}
       >
         <div className="max-w-7xl mx-auto space-y-8">
-          <div className="flex flex-wrap items-center justify-end gap-3">
-            <div className="flex items-center gap-2">
-              <label className="text-xs font-medium text-gray-500">
-                Template Name
-              </label>
-              <input
-                type="text"
-                placeholder="Template Name"
-                value={templateName}
-                onChange={(event) => setTemplateName(event.target.value)}
-                className="w-56 rounded-lg border border-[#e5e5e5] px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-2">
+                <label className="text-xs font-medium text-gray-500">
+                  Template Name
+                </label>
+                <input
+                  type="text"
+                  placeholder="Template Name"
+                  value={templateName}
+                  onChange={(event) => setTemplateName(event.target.value)}
+                  className="w-56 rounded-lg border border-[#e5e5e5] px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <button
+                type="button"
+                disabled={isInspecting || isRunning}
+                onClick={() => {
+                  const template = {
+                    id: `template-${Date.now()}`,
+                    name:
+                      templateName?.trim() ||
+                      new Date().toLocaleString("id-ID"),
+                    createdAt: new Date().toISOString(),
+                    targetUrl,
+                    groups,
+                  };
+                  saveTemplate(template);
+                  setShowSaveConfirm(true);
+                }}
+                className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium border rounded-lg ${
+                  isInspecting || isRunning
+                    ? "border-green-100 bg-green-50 text-green-300 cursor-not-allowed"
+                    : "border-green-200 bg-green-100 text-green-700 hover:bg-green-200"
+                }`}
+              >
+                <FileText className="w-4 h-4" />
+                Simpan
+              </button>
             </div>
-            <div className="flex items-center gap-2">
-              <label className="text-xs font-medium text-gray-500">
-                Target URL
-              </label>
-              <input
-                type="text"
-                placeholder="https://contoh.app"
-                value={targetUrl}
-                onChange={(event) => setTargetUrl(event.target.value)}
-                className="w-64 rounded-lg border border-[#e5e5e5] px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-2">
+                <label className="text-xs font-medium text-gray-500">
+                  Inspect URL
+                </label>
+                <input
+                  type="text"
+                  placeholder="https://contoh.app"
+                  value={targetUrl}
+                  onChange={(event) => setTargetUrl(event.target.value)}
+                  className="w-64 rounded-lg border border-[#e5e5e5] px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={runInspect}
+                disabled={isInspecting}
+                className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium border border-[#e5e5e5] rounded-lg ${
+                  isInspecting
+                    ? "bg-amber-100 text-amber-400 cursor-not-allowed"
+                    : "bg-amber-200 text-amber-900 hover:bg-amber-300"
+                }`}
+              >
+                {isInspecting ? "Inspecting..." : "Inspect"}
+              </button>
+              <button
+                type="button"
+                disabled={!hasInspected || isInspecting || isRunning}
+                onClick={loadLogs}
+                className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium border border-[#e5e5e5] rounded-lg ${
+                  hasInspected && !isInspecting && !isRunning
+                    ? "bg-blue-50 text-blue-700 hover:bg-blue-100"
+                    : "bg-blue-50 text-blue-300 cursor-not-allowed"
+                }`}
+              >
+                Logs
+              </button>
             </div>
-            <button
-              type="button"
-              disabled={isInspecting || isRunning}
-              onClick={() => {
-                const template = {
-                  id: `template-${Date.now()}`,
-                  name:
-                    templateName?.trim() || new Date().toLocaleString("id-ID"),
-                  createdAt: new Date().toISOString(),
-                  targetUrl,
-                  groups,
-                };
-                saveTemplate(template);
-                setShowSaveConfirm(true);
-              }}
-              className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium border rounded-lg ${
-                isInspecting || isRunning
-                  ? "border-green-100 bg-green-50 text-green-300 cursor-not-allowed"
-                  : "border-green-200 bg-green-100 text-green-700 hover:bg-green-200"
-              }`}
-            >
-              <FileText className="w-4 h-4" />
-              Simpan
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowResetConfirm(true)}
-              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium border border-red-200 rounded-lg bg-red-50 text-red-700 hover:bg-red-100"
-            >
-              Reset
-            </button>
-            <button
-              type="button"
-              onClick={runInspect}
-              disabled={isInspecting}
-              className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium border border-[#e5e5e5] rounded-lg ${
-                isInspecting
-                  ? "bg-amber-100 text-amber-400 cursor-not-allowed"
-                  : "bg-amber-200 text-amber-900 hover:bg-amber-300"
-              }`}
-            >
-              {isInspecting ? "Inspecting..." : "Inspect"}
-            </button>
-            <button
-              type="button"
-              disabled={!hasInspected || isInspecting || isRunning}
-              onClick={loadLogs}
-              className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium border border-[#e5e5e5] rounded-lg ${
-                hasInspected && !isInspecting && !isRunning
-                  ? "bg-blue-50 text-blue-700 hover:bg-blue-100"
-                  : "bg-blue-50 text-blue-300 cursor-not-allowed"
-              }`}
-            >
-              Logs
-            </button>
-            <button
-              type="button"
-              onClick={runSteps}
-              disabled={isRunning || isInspecting}
-              className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg ${
-                isRunning || isInspecting
-                  ? "bg-blue-200 text-white cursor-not-allowed"
-                  : "bg-blue-600 text-white hover:bg-blue-700"
-              }`}
-            >
-              <PlayCircle className="w-4 h-4" />
-              {isRunning ? "Running..." : "Jalankan"}
-            </button>
+
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setShowResetConfirm(true)}
+                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium border border-red-200 rounded-lg bg-red-50 text-red-700 hover:bg-red-100"
+              >
+                Reset
+              </button>
+              <button
+                type="button"
+                onClick={runSteps}
+                disabled={isRunning || isInspecting}
+                className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg ${
+                  isRunning || isInspecting
+                    ? "bg-blue-200 text-white cursor-not-allowed"
+                    : "bg-blue-600 text-white hover:bg-blue-700"
+                }`}
+              >
+                <PlayCircle className="w-4 h-4" />
+                {isRunning ? "Running..." : "Jalankan"}
+              </button>
+            </div>
           </div>
           {inspectError && (
             <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -300,7 +309,7 @@ export default function EditorPage() {
                   className="inline-flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100"
                 >
                   <FolderPlus className="w-4 h-4" />
-                  Add Sub Menu
+                  Add Group
                 </button>
               </div>
               <div className="divide-y divide-[#e5e5e5]">
