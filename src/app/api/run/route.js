@@ -14,27 +14,28 @@ async function writeLog(data) {
 }
 
 async function resolveLocator(page, step) {
-  const selector = step.selector?.trim();
   const label = step.label?.trim();
+  const scopeSelector = step.scopeSelector?.trim();
   const timeoutMs = Number.parseInt(step.timeoutMs, 10) || 5000;
+  let scope = page;
 
-  if (selector) {
-    const locator = page.locator(selector).first();
-    await locator.waitFor({ state: "visible", timeout: timeoutMs });
-    return locator;
+  if (scopeSelector) {
+    const scoped = page.locator(scopeSelector).first();
+    await scoped.waitFor({ state: "visible", timeout: timeoutMs });
+    scope = scoped;
   }
 
   const candidates = [];
   if (label) {
     if (step.type === "Click") {
-      candidates.push(page.getByRole("button", { name: label }));
+      candidates.push(scope.getByRole("button", { name: label }));
     }
     if (step.type === "Input") {
-      candidates.push(page.getByLabel(label));
-      candidates.push(page.getByRole("textbox", { name: label }));
+      candidates.push(scope.getByLabel(label));
+      candidates.push(scope.getByRole("textbox", { name: label }));
     }
-    candidates.push(page.getByText(label, { exact: true }));
-    candidates.push(page.getByLabel(label));
+    candidates.push(scope.getByText(label, { exact: true }));
+    candidates.push(scope.getByLabel(label));
   }
 
   for (const locator of candidates) {
@@ -47,7 +48,7 @@ async function resolveLocator(page, step) {
     }
   }
 
-  throw new Error("Selector or label is required");
+  throw new Error("Label is required");
 }
 
 export async function POST(request) {
@@ -90,7 +91,6 @@ export async function POST(request) {
           group: group.name || group.id || "Group",
           step: step.title || step.id || "Step",
           action: step.type || "Unknown",
-          selector: step.selector || "",
           status: "pending",
           ts: new Date().toISOString(),
         };

@@ -11,26 +11,7 @@ export function ActionDetails({ selectedStepData, onChange }) {
     );
   }
 
-  const targetType =
-    selectedStepData.targetType ||
-    (selectedStepData.selector?.trim() ? "selector" : "label");
-  const targetValue =
-    targetType === "selector"
-      ? selectedStepData.selector
-      : selectedStepData.label;
-  const targetLabel =
-    targetType === "selector" ? "Selector / Elemen" : "Label / Text";
-  const targetPlaceholder = targetType === "selector" ? "#submit" : "Simpan";
-  const handleTargetTypeChange = (event) => {
-    const nextType = event.target.value;
-    onChange("targetType", nextType);
-    if (nextType === "label" && selectedStepData.selector) {
-      onChange("selector", "");
-    }
-    if (nextType === "selector" && selectedStepData.label) {
-      onChange("label", "");
-    }
-  };
+  const labelValue = selectedStepData.label || "";
 
   switch (selectedStepData.type) {
     case "Click":
@@ -38,30 +19,26 @@ export function ActionDetails({ selectedStepData, onChange }) {
         <div className="space-y-4">
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-2">
-              Target
-            </label>
-            <select
-              value={targetType}
-              onChange={handleTargetTypeChange}
-              className="w-full rounded-lg border border-[#e5e5e5] px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="label">Label / Text</option>
-              <option value="selector">Selector / Elemen</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-2">
-              {targetLabel}
+              Label / Text
             </label>
             <input
               type="text"
-              placeholder={targetPlaceholder}
-              value={targetValue}
+              placeholder="Simpan"
+              value={labelValue}
+              onChange={(event) => onChange("label", event.target.value)}
+              className="w-full rounded-lg border border-[#e5e5e5] px-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-2">
+              Scope Selector (optional)
+            </label>
+            <input
+              type="text"
+              placeholder="form#checkout"
+              value={selectedStepData.scopeSelector || ""}
               onChange={(event) =>
-                onChange(
-                  targetType === "selector" ? "selector" : "label",
-                  event.target.value
-                )
+                onChange("scopeSelector", event.target.value)
               }
               className="w-full rounded-lg border border-[#e5e5e5] px-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
@@ -85,30 +62,26 @@ export function ActionDetails({ selectedStepData, onChange }) {
         <div className="space-y-4">
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-2">
-              Target
-            </label>
-            <select
-              value={targetType}
-              onChange={handleTargetTypeChange}
-              className="w-full rounded-lg border border-[#e5e5e5] px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="label">Label / Text</option>
-              <option value="selector">Selector / Elemen</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-2">
-              {targetLabel}
+              Label / Text
             </label>
             <input
               type="text"
-              placeholder={targetType === "selector" ? "#username" : "Email"}
-              value={targetValue}
+              placeholder="Email"
+              value={labelValue}
+              onChange={(event) => onChange("label", event.target.value)}
+              className="w-full rounded-lg border border-[#e5e5e5] px-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-2">
+              Scope Selector (optional)
+            </label>
+            <input
+              type="text"
+              placeholder="form#checkout"
+              value={selectedStepData.scopeSelector || ""}
               onChange={(event) =>
-                onChange(
-                  targetType === "selector" ? "selector" : "label",
-                  event.target.value
-                )
+                onChange("scopeSelector", event.target.value)
               }
               className="w-full rounded-lg border border-[#e5e5e5] px-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />

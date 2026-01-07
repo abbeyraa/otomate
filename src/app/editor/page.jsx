@@ -91,19 +91,11 @@ export default function EditorPage() {
 
   const isStepInvalid = (step) => {
     if (!step) return true;
-    const targetType =
-      step.targetType || (step.selector?.trim() ? "selector" : "label");
     switch (step.type) {
       case "Click":
-        return targetType === "selector"
-          ? isBlank(step.selector)
-          : isBlank(step.label);
+        return isBlank(step.label);
       case "Input": {
-        const targetMissing =
-          targetType === "selector"
-            ? isBlank(step.selector)
-            : isBlank(step.label);
-        return targetMissing || isBlank(step.value);
+        return isBlank(step.label) || isBlank(step.value);
       }
       case "Wait":
         return isBlank(step.waitMs);
