@@ -367,68 +367,79 @@ export default function EditorPage() {
                           Steps
                         </div>
                         <div className="divide-y divide-[#e5e5e5]">
-                          {group.steps.map((step) => (
-                            <div
-                              key={step.id}
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                handleSelectStep(group.id, step.id);
-                              }}
-                              onDragStart={(event) =>
-                                handleDragStart(event, group.id, step.id)
-                              }
-                              onDragOver={(event) => event.preventDefault()}
-                              onDrop={(event) =>
-                                handleDrop(event, group.id, step.id)
-                              }
-                              onDragEnd={handleStepDragEnd}
-                              draggable
-                              role="button"
-                              tabIndex={0}
-                              data-step-row="true"
-                              className={`w-full text-left pl-6 pr-6 py-4 transition-colors cursor-pointer ${
-                                selectedStep.groupId === group.id &&
-                                selectedStep.stepId === step.id
-                                  ? "bg-blue-50"
-                                  : "hover:bg-gray-50"
-                              }`}
-                            >
-                              <div className="flex items-start gap-4">
+                          {group.steps.map((step) => {
+                            const isSelected =
+                              selectedStep.groupId === group.id &&
+                              selectedStep.stepId === step.id;
+                            return (
+                              <div
+                                key={step.id}
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  handleSelectStep(group.id, step.id);
+                                }}
+                                onDragStart={(event) =>
+                                  handleDragStart(event, group.id, step.id)
+                                }
+                                onDragOver={(event) => event.preventDefault()}
+                                onDrop={(event) =>
+                                  handleDrop(event, group.id, step.id)
+                                }
+                                onDragEnd={handleStepDragEnd}
+                                draggable
+                                role="button"
+                                tabIndex={0}
+                                data-step-row="true"
+                                className={`relative w-full text-left pl-6 pr-6 py-4 transition-colors cursor-pointer rounded-md ${
+                                  isSelected
+                                    ? "bg-blue-50 ring-1 ring-blue-200"
+                                    : "hover:bg-gray-50"
+                                }`}
+                              >
                                 <span
-                                  className={`mt-0.5 inline-flex h-8 w-8 items-center justify-center rounded-md border ${
-                                    draggedStepId === step.id &&
-                                    draggedGroupId === group.id
-                                      ? "border-blue-200 bg-blue-100 text-blue-700"
-                                      : "border-[#e5e5e5] bg-white text-gray-400"
+                                  className={`absolute left-0 top-3 bottom-3 w-1 rounded-r bg-blue-500 origin-center transition-transform duration-200 ease-out ${
+                                    isSelected
+                                      ? "scale-y-100 opacity-100"
+                                      : "scale-y-0 opacity-0"
                                   }`}
-                                >
-                                  <GripVertical className="h-4 w-4" />
-                                </span>
-                                <div className="flex-1">
-                                  <p className="text-sm font-semibold text-gray-900">
-                                    {step.title}
-                                  </p>
-                                  <p className="text-xs text-gray-500 mt-1">
-                                    {step.description}
-                                  </p>
+                                />
+                                <div className="flex items-start gap-4">
+                                  <span
+                                    className={`mt-0.5 inline-flex h-8 w-8 items-center justify-center rounded-md border ${
+                                      draggedStepId === step.id &&
+                                      draggedGroupId === group.id
+                                        ? "border-blue-200 bg-blue-100 text-blue-700"
+                                        : "border-[#e5e5e5] bg-white text-gray-400"
+                                    }`}
+                                  >
+                                    <GripVertical className="h-4 w-4" />
+                                  </span>
+                                  <div className="flex-1">
+                                    <p className="text-sm font-semibold text-gray-900">
+                                      {step.title}
+                                    </p>
+                                    <p className="text-xs text-gray-500 mt-1">
+                                      {step.description}
+                                    </p>
+                                  </div>
+                                  <span className="text-[11px] px-2 py-1 rounded-full bg-gray-100 text-gray-600">
+                                    {step.type}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    aria-label="Delete step"
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      handleDeleteStep(group.id, step.id);
+                                    }}
+                                    className="inline-flex h-7 w-7 items-center justify-center rounded-md text-red-600 hover:text-red-700 hover:bg-red-50"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </button>
                                 </div>
-                                <span className="text-[11px] px-2 py-1 rounded-full bg-gray-100 text-gray-600">
-                                  {step.type}
-                                </span>
-                                <button
-                                  type="button"
-                                  aria-label="Delete step"
-                                  onClick={(event) => {
-                                    event.stopPropagation();
-                                    handleDeleteStep(group.id, step.id);
-                                  }}
-                                  className="inline-flex h-7 w-7 items-center justify-center rounded-md text-red-600 hover:text-red-700 hover:bg-red-50"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </button>
                               </div>
-                            </div>
-                          ))}
+                            );
+                          })}
                           <div className="pl-6 pr-6 py-4">
                             <button
                               type="button"
