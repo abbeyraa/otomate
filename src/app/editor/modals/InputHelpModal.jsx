@@ -16,7 +16,7 @@ export default function InputHelpModal({ open, onClose }) {
             className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[#e5e5e5] bg-white text-gray-500 hover:bg-gray-50"
             aria-label="Close"
           >
-            ?
+            ✕
           </button>
         </div>
         <div className="mt-4 space-y-3 text-sm text-gray-600">

@@ -117,6 +117,16 @@ export default function EditorStyles() {
       .menu-pop {
         animation: menuPop 160ms ease-out;
       }
+
+      .is-dragging {
+        opacity: 0.45;
+        transform: scale(0.98);
+      }
+
+      .drop-target {
+        box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.35);
+        background: rgba(59, 130, 246, 0.04);
+      }
     `}</style>
   );
 }

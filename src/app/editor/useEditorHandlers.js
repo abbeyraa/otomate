@@ -296,6 +296,29 @@ export function useEditorHandlers(templateId = "") {
     setDraggedGroupId(groupId);
     event.dataTransfer.effectAllowed = "move";
     event.dataTransfer.setData("text/plain", `${groupId}:${stepId}`);
+    const step = groups
+      .find((group) => group.id === groupId)
+      ?.steps.find((item) => item.id === stepId);
+    if (step && typeof document !== "undefined") {
+      const ghost = document.createElement("div");
+      ghost.textContent = step.title || "Step";
+      ghost.style.position = "absolute";
+      ghost.style.top = "-1000px";
+      ghost.style.left = "-1000px";
+      ghost.style.padding = "6px 10px";
+      ghost.style.background = "#ffffff";
+      ghost.style.border = "1px solid #e5e5e5";
+      ghost.style.borderRadius = "8px";
+      ghost.style.boxShadow = "0 8px 16px rgba(15, 23, 42, 0.15)";
+      ghost.style.fontSize = "12px";
+      ghost.style.fontWeight = "600";
+      ghost.style.color = "#111827";
+      document.body.appendChild(ghost);
+      event.dataTransfer.setDragImage(ghost, 10, 10);
+      setTimeout(() => {
+        document.body.removeChild(ghost);
+      }, 0);
+    }
   };
 
   const handleStepDragEnd = () => {
@@ -413,6 +436,27 @@ export function useEditorHandlers(templateId = "") {
     setDraggedGroupSectionId(groupId);
     event.dataTransfer.effectAllowed = "move";
     event.dataTransfer.setData("text/plain", `group:${groupId}`);
+    const group = groups.find((item) => item.id === groupId);
+    if (group && typeof document !== "undefined") {
+      const ghost = document.createElement("div");
+      ghost.textContent = group.name || "Group";
+      ghost.style.position = "absolute";
+      ghost.style.top = "-1000px";
+      ghost.style.left = "-1000px";
+      ghost.style.padding = "6px 10px";
+      ghost.style.background = "#ffffff";
+      ghost.style.border = "1px solid #e5e5e5";
+      ghost.style.borderRadius = "8px";
+      ghost.style.boxShadow = "0 8px 16px rgba(15, 23, 42, 0.15)";
+      ghost.style.fontSize = "12px";
+      ghost.style.fontWeight = "600";
+      ghost.style.color = "#111827";
+      document.body.appendChild(ghost);
+      event.dataTransfer.setDragImage(ghost, 10, 10);
+      setTimeout(() => {
+        document.body.removeChild(ghost);
+      }, 0);
+    }
   };
 
   const handleGroupDragEnd = () => {

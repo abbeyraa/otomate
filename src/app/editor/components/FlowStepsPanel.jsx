@@ -118,13 +118,15 @@ export default function FlowStepsPanel({
             {draggedGroupSectionId && hoveredGroupId === group.id && (
               <div className="absolute left-0 right-0 top-0 h-0.5 bg-blue-400" />
             )}
-            <div
-              className={`px-6 py-4 bg-gray-50 flex items-center justify-between ${
-                draggedGroupSectionId === group.id || hoveredGroupId === group.id
-                  ? "bg-blue-50"
-                  : ""
-              } ${lastAddedGroupId === group.id ? "group-added" : ""}`}
-            >
+                    <div
+                      className={`px-6 py-4 bg-gray-50 flex items-center justify-between ${
+                        draggedGroupSectionId === group.id || hoveredGroupId === group.id
+                          ? "bg-blue-50"
+                          : ""
+                      } ${lastAddedGroupId === group.id ? "group-added" : ""} ${
+                        draggedGroupSectionId === group.id ? "is-dragging" : ""
+                      }`}
+                    >
               <div className="flex items-center gap-3">
                 <button
                   type="button"
@@ -300,6 +302,15 @@ export default function FlowStepsPanel({
                             : isSelected
                             ? "bg-blue-50 ring-1 ring-blue-200"
                             : "hover:bg-gray-50"
+                        } ${
+                          draggedStepId === step.id && draggedGroupId === group.id
+                            ? "is-dragging"
+                            : ""
+                        } ${
+                          stepDropTarget.groupId === group.id &&
+                          stepDropTarget.stepId === step.id
+                            ? "drop-target"
+                            : ""
                         }`}
                       >
                         {stepDropTarget.groupId === group.id &&
