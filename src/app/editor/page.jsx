@@ -69,6 +69,7 @@ export default function EditorPage() {
     closeLogs,
     resetEditor,
     clearEditor,
+    addLogStep,
   } = useEditorHandlers(templateId);
 
   const selectedGroup = groups.find(
@@ -363,7 +364,11 @@ export default function EditorPage() {
             </div>
           </div>
           {logsOpen && (
-            <LogsModal logsContent={logsContent} onClose={closeLogs} />
+            <LogsModal
+              logsContent={logsContent}
+              onClose={closeLogs}
+              onCreateStep={addLogStep}
+            />
           )}
           <SavePromptModal
             open={showSavePrompt}

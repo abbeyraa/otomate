@@ -573,5 +573,74 @@ export function useEditorHandlers(templateId = "") {
     closeLogs,
     resetEditor,
     clearEditor,
+    addLogStep: (logEvent) => {
+      if (!logEvent) return;
+      const type = logEvent.type;
+      let step = null;
+      if (type === "navigation") {
+        step = {
+          id: `step-${Date.now()}`,
+          title: "Navigate from Logs",
+          description: logEvent.message || "Navigation from logs",
+          type: "Navigate",
+          scopeSelector: "",
+          inputKind: "text",
+          dateFormat: "",
+          value: "",
+          label: "",
+          timeoutMs: "5000",
+          waitMs: "",
+          url: logEvent.data?.url || "",
+        };
+      } else if (type === "interaction.click") {
+        step = {
+          id: `step-${Date.now()}`,
+          title: "Click from Logs",
+          description: logEvent.message || "Click from logs",
+          type: "Click",
+          scopeSelector: "",
+          inputKind: "text",
+          dateFormat: "",
+          value: "",
+          label:
+            logEvent.data?.label ||
+            logEvent.data?.text ||
+            logEvent.data?.selector ||
+            "",
+          timeoutMs: "5000",
+          waitMs: "",
+          url: "",
+        };
+      }
+
+      if (!step) return;
+
+      setGroups((prev) => {
+        const next = [...prev];
+        let groupIndex = next.findIndex((group) => group.name === "Logs");
+        if (groupIndex === -1) {
+          const groupId = `group-${Date.now()}`;
+          next.push({
+            id: groupId,
+            name: "Logs",
+            repeat: {
+              enabled: false,
+              mode: "count",
+              count: 1,
+              useData: true,
+            },
+            steps: [step],
+          });
+          groupIndex = next.length - 1;
+        } else {
+          const group = next[groupIndex];
+          next[groupIndex] = {
+            ...group,
+            steps: [...group.steps, step],
+          };
+        }
+        return next;
+      });
+    },
   };
 }

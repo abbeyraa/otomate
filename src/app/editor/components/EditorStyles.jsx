@@ -84,6 +84,25 @@ export default function EditorStyles() {
         animation: toastPop 1.2s ease-out;
       }
 
+      @keyframes toastPopSmooth {
+        0% {
+          opacity: 0;
+          transform: translateY(-2px) scale(0.98);
+        }
+        60% {
+          opacity: 1;
+          transform: translateY(0) scale(1.01);
+        }
+        100% {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+        }
+      }
+
+      .toast-pop-smooth {
+        animation: toastPopSmooth 320ms cubic-bezier(0.22, 1, 0.36, 1);
+      }
+
       @keyframes menuPop {
         from {
           opacity: 0;
