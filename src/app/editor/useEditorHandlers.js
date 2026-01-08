@@ -357,9 +357,7 @@ export function useEditorHandlers(templateId = "") {
   const handleUpdateGroupRepeat = (groupId, nextRepeat) => {
     setGroups((prev) =>
       prev.map((group) =>
-        group.id === groupId
-          ? { ...group, repeat: nextRepeat }
-          : group
+        group.id === groupId ? { ...group, repeat: nextRepeat } : group
       )
     );
   };

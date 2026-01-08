@@ -141,7 +141,11 @@ export default function EditorPage() {
   const detailKey = `${selectedStep.groupId}-${selectedStep.stepId}`;
   const [repeatModalGroupId, setRepeatModalGroupId] = useState("");
   const [repeatDraftCount, setRepeatDraftCount] = useState("1");
-  const [repeatDraftUseData, setRepeatDraftUseData] = useState(true);
+  const [repeatDraftMode, setRepeatDraftMode] = useState("count");
+  const [dataSummary, setDataSummary] = useState({
+    rowsTotal: 0,
+    hasHeader: false,
+  });
 
   const getRepeatConfig = (group) => {
     const repeat = group.repeat || {};
@@ -156,13 +160,40 @@ export default function EditorPage() {
   const openRepeatModal = (group) => {
     const repeat = getRepeatConfig(group);
     setRepeatDraftCount(String(repeat.count || 1));
-    setRepeatDraftUseData(Boolean(repeat.useData));
+    setRepeatDraftMode(repeat.mode || "count");
     setRepeatModalGroupId(group.id);
   };
 
   const closeRepeatModal = () => {
     setRepeatModalGroupId("");
   };
+
+  useEffect(() => {
+    let isMounted = true;
+    const loadDataSummary = async () => {
+      try {
+        const response = await fetch("/api/data", { cache: "no-store" });
+        if (!response.ok) return;
+        const payload = await response.json();
+        const stored = payload?.data;
+        const firstSheet = stored?.sheets?.[0];
+        const rawRows = Array.isArray(firstSheet?.rows)
+          ? firstSheet.rows.length
+          : 0;
+        const hasHeader = Boolean(stored?.hasHeader);
+        const rowsTotal = Math.max(0, rawRows - (hasHeader ? 1 : 0));
+        if (!isMounted) return;
+        setDataSummary({ rowsTotal, hasHeader });
+      } catch {
+        // Ignore data load failures.
+      }
+    };
+
+    loadDataSummary();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   return (
     <div className="h-full flex flex-col">
@@ -763,27 +794,53 @@ export default function EditorPage() {
                 <div className="mt-5 space-y-4">
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-2">
-                      Repetition count
+                      Repeat mode
                     </label>
-                    <input
-                      type="number"
-                      min="1"
-                      value={repeatDraftCount}
-                      onChange={(event) => setRepeatDraftCount(event.target.value)}
-                      className="w-40 rounded-lg border border-[#e5e5e5] px-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
+                    <select
+                      value={repeatDraftMode}
+                      onChange={(event) => {
+                        setRepeatDraftMode(event.target.value);
+                      }}
+                      className="w-64 rounded-lg border border-[#e5e5e5] px-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="count">Repeat by number</option>
+                      <option value="data">
+                        Repeat by total data rows ({dataSummary.rowsTotal})
+                      </option>
+                      <option
+                        value="until"
+                        disabled
+                        style={{ textDecoration: "line-through" }}
+                      >
+                        Repeat until condition (coming soon)
+                      </option>
+                    </select>
                   </div>
-                  <label className="flex items-center gap-3 text-sm text-gray-700">
-                    <input
-                      type="checkbox"
-                      checked={repeatDraftUseData}
-                      onChange={(event) =>
-                        setRepeatDraftUseData(event.target.checked)
-                      }
-                      className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                    />
-                    Use data from Menu Data
-                  </label>
+                  {repeatDraftMode === "count" && (
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-2">
+                        Repetition count
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={repeatDraftCount}
+                        onChange={(event) =>
+                          setRepeatDraftCount(event.target.value)
+                        }
+                        className="w-40 rounded-lg border border-[#e5e5e5] px-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                  )}
+                  {repeatDraftMode === "data" && (
+                    <div className="rounded-lg border border-[#e5e5e5] bg-gray-50 px-4 py-3 text-xs text-gray-600">
+                      Total rows from Menu Data:{" "}
+                      <span className="font-semibold">
+                        {dataSummary.rowsTotal}
+                      </span>{" "}
+                      {dataSummary.hasHeader ? "(heading excluded)" : ""}
+                    </div>
+                  )}
                   <div className="rounded-lg border border-blue-100 bg-blue-50 px-4 py-2 text-xs text-blue-600">
                     Mode "Until ..." will be added later.
                   </div>
@@ -814,11 +871,16 @@ export default function EditorPage() {
                           1,
                           Number.parseInt(repeatDraftCount, 10) || 1
                         );
+                        const modeValue = repeatDraftMode || "count";
+                        const nextCount =
+                          modeValue === "data"
+                            ? dataSummary.rowsTotal
+                            : countValue;
                         handleUpdateGroupRepeat(repeatModalGroupId, {
                           enabled: true,
-                          mode: "count",
-                          count: countValue,
-                          useData: repeatDraftUseData,
+                          mode: modeValue,
+                          count: nextCount,
+                          useData: modeValue === "data",
                         });
                         closeRepeatModal();
                       }}
