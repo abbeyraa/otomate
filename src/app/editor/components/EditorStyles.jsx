@@ -83,6 +83,21 @@ export default function EditorStyles() {
       .toast-pop {
         animation: toastPop 1.2s ease-out;
       }
+
+      @keyframes menuPop {
+        from {
+          opacity: 0;
+          transform: translateY(6px) scale(0.98);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+        }
+      }
+
+      .menu-pop {
+        animation: menuPop 160ms ease-out;
+      }
     `}</style>
   );
 }

@@ -1,11 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useEditorHandlers } from "./useEditorHandlers";
 import { saveTemplate } from "../template/templateStorage";
 import LogsModal from "./modals/LogsModal";
-import ResetConfirmModal from "./modals/ResetConfirmModal";
 import SavePromptModal from "./modals/SavePromptModal";
 import SaveConfirmModal from "./modals/SaveConfirmModal";
 import EditorDetailPanel from "./components/EditorDetailPanel";
@@ -13,15 +12,16 @@ import InputHelpModal from "./modals/InputHelpModal";
 import RepeatModal from "./modals/RepeatModal";
 import FlowStepsPanel from "./components/FlowStepsPanel";
 import EditorStyles from "./components/EditorStyles";
-import { PlayCircle, FileText, User } from "lucide-react";
+import { PlayCircle, FileText, User, Search } from "lucide-react";
 import { stepTemplates } from "./stepTemplates";
 
 export default function EditorPage() {
-  const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showSavePrompt, setShowSavePrompt] = useState(false);
   const [showSaveConfirm, setShowSaveConfirm] = useState(false);
   const [showGroupToast, setShowGroupToast] = useState(false);
   const [showInputHelp, setShowInputHelp] = useState(false);
+  const [showResetMenu, setShowResetMenu] = useState(false);
+  const resetMenuRef = useRef(null);
   const searchParams = useSearchParams();
   const templateId = searchParams.get("templateId") || "";
   const {
@@ -68,6 +68,7 @@ export default function EditorPage() {
     loadLogs,
     closeLogs,
     resetEditor,
+    clearEditor,
   } = useEditorHandlers(templateId);
 
   const selectedGroup = groups.find(
@@ -121,6 +122,17 @@ export default function EditorPage() {
     cleaned.searchParams.delete("templateId");
     window.history.replaceState({}, "", cleaned);
   }, [templateId]);
+
+  useEffect(() => {
+    if (!showResetMenu) return;
+    const handleClick = (event) => {
+      if (!resetMenuRef.current) return;
+      if (resetMenuRef.current.contains(event.target)) return;
+      setShowResetMenu(false);
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [showResetMenu]);
 
   const detailKey = `${selectedStep.groupId}-${selectedStep.stepId}`;
   const [repeatModalGroupId, setRepeatModalGroupId] = useState("");
@@ -209,14 +221,15 @@ export default function EditorPage() {
                 onClick={() => {
                   setShowSavePrompt(true);
                 }}
-                className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium border rounded-lg ${
+                className={`inline-flex h-9 w-9 items-center justify-center border rounded-lg ${
                   isInspecting || isRunning
                     ? "border-green-100 bg-green-50 text-green-300 cursor-not-allowed"
                     : "border-green-200 bg-green-100 text-green-700 hover:bg-green-200"
                 }`}
+                title="Simpan"
+                aria-label="Simpan"
               >
                 <FileText className="w-4 h-4" />
-                Simpan
               </button>
             </div>
 
@@ -237,13 +250,15 @@ export default function EditorPage() {
                 type="button"
                 onClick={runInspect}
                 disabled={isInspecting}
-                className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium border border-[#e5e5e5] rounded-lg ${
+                className={`inline-flex h-9 w-9 items-center justify-center border border-[#e5e5e5] rounded-lg ${
                   isInspecting
                     ? "bg-amber-100 text-amber-400 cursor-not-allowed"
                     : "bg-amber-200 text-amber-900 hover:bg-amber-300"
                 }`}
+                title={isInspecting ? "Inspecting..." : "Inspect"}
+                aria-label={isInspecting ? "Inspecting..." : "Inspect"}
               >
-                {isInspecting ? "Inspecting..." : "Inspect"}
+                <Search className="h-4 w-4" />
               </button>
               <button
                 type="button"
@@ -260,25 +275,52 @@ export default function EditorPage() {
             </div>
 
             <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => setShowResetConfirm(true)}
-                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium border border-red-200 rounded-lg bg-red-50 text-red-700 hover:bg-red-100"
-              >
-                Reset
-              </button>
+              <div className="relative" ref={resetMenuRef}>
+                <button
+                  type="button"
+                  onClick={() => setShowResetMenu((open) => !open)}
+                  className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium border border-red-200 rounded-lg bg-red-50 text-red-700 hover:bg-red-100"
+                >
+                  Reset
+                </button>
+                {showResetMenu && (
+                  <div className="absolute right-0 mt-2 w-48 rounded-lg border border-[#e5e5e5] bg-white shadow-lg menu-pop">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        resetEditor();
+                        setShowResetMenu(false);
+                      }}
+                      className="w-full px-4 py-2 text-left text-xs font-semibold text-gray-700 hover:bg-gray-50"
+                    >
+                      Reset to Initial
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        clearEditor();
+                        setShowResetMenu(false);
+                      }}
+                      className="w-full px-4 py-2 text-left text-xs font-semibold text-red-600 hover:bg-red-50"
+                    >
+                      Delete All
+                    </button>
+                  </div>
+                )}
+              </div>
               <button
                 type="button"
                 onClick={runSteps}
                 disabled={isRunning || isInspecting || hasInvalidStep}
-                className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg ${
+                className={`inline-flex h-9 w-9 items-center justify-center rounded-lg ${
                   isRunning || isInspecting || hasInvalidStep
                     ? "bg-blue-200 text-white cursor-not-allowed"
                     : "bg-blue-600 text-white hover:bg-blue-700"
                 }`}
+                title={isRunning ? "Running..." : "Jalankan"}
+                aria-label={isRunning ? "Running..." : "Jalankan"}
               >
                 <PlayCircle className="w-4 h-4" />
-                {isRunning ? "Running..." : "Jalankan"}
               </button>
             </div>
           </div>
@@ -323,14 +365,6 @@ export default function EditorPage() {
           {logsOpen && (
             <LogsModal logsContent={logsContent} onClose={closeLogs} />
           )}
-          <ResetConfirmModal
-            open={showResetConfirm}
-            onCancel={() => setShowResetConfirm(false)}
-            onConfirm={() => {
-              resetEditor();
-              setShowResetConfirm(false);
-            }}
-          />
           <SavePromptModal
             open={showSavePrompt}
             templateName={templateName}

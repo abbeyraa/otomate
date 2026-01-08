@@ -472,6 +472,20 @@ export function useEditorHandlers(templateId = "") {
     setHasInspected(false);
   };
 
+  const clearEditor = () => {
+    setGroups([]);
+    setSelectedStep({ groupId: "", stepId: "" });
+    setOpenGroups({});
+    setTargetUrl("");
+    setTemplateName("");
+    setLogsContent(null);
+    setLogsOpen(false);
+    setInspectError("");
+    setRunError("");
+    setHasInspected(false);
+    setLastAddedGroupId(null);
+  };
+
   const runSteps = async () => {
     setIsRunning(true);
     setRunError("");
@@ -539,5 +553,6 @@ export function useEditorHandlers(templateId = "") {
     loadLogs,
     closeLogs,
     resetEditor,
+    clearEditor,
   };
 }
