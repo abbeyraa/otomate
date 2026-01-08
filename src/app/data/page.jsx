@@ -6,6 +6,7 @@ import Papa from "papaparse";
 import { UploadCloud, FileSpreadsheet, Trash2 } from "lucide-react";
 
 const STORAGE_KEY = "otomate:data-source";
+const DATA_API_URL = "/api/data";
 
 const toColumnLabel = (index) => {
   let label = "";
@@ -16,6 +17,29 @@ const toColumnLabel = (index) => {
     value = Math.floor((value - 1) / 26);
   }
   return label;
+};
+
+const getSheetColumns = (sheet, hasHeader) => {
+  if (!sheet) return [];
+  const maxColumns = sheet.maxColumns ?? sheet.columns?.length ?? 0;
+  if (hasHeader && sheet.rows?.length) {
+    const headerRow = Array.isArray(sheet.rows[0]) ? sheet.rows[0] : [];
+    return Array.from({ length: maxColumns }, (_, index) => {
+      const raw = headerRow[index];
+      const cleaned =
+        raw === null || raw === undefined ? "" : String(raw).trim();
+      return cleaned || sheet.columns?.[index] || toColumnLabel(index);
+    });
+  }
+  if (sheet.columns?.length) return sheet.columns;
+  return Array.from({ length: maxColumns }, (_, index) =>
+    toColumnLabel(index)
+  );
+};
+
+const getSheetRows = (sheet, hasHeader) => {
+  if (!sheet?.rows?.length) return [];
+  return hasHeader ? sheet.rows.slice(1) : sheet.rows;
 };
 
 const normalizeSheets = (sheets) =>
@@ -85,22 +109,79 @@ export default function DataPage() {
   const [data, setData] = useState(null);
   const [activeSheet, setActiveSheet] = useState("");
   const [delimiter, setDelimiter] = useState(",");
+  const [hasHeader, setHasHeader] = useState(false);
   const [error, setError] = useState("");
   const [isParsing, setIsParsing] = useState(false);
 
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (!stored) return;
-    try {
-      const parsed = JSON.parse(stored);
-      if (parsed?.sheets) {
-        setData(parsed);
-        setActiveSheet(parsed.sheets[0]?.name || "");
+    let isMounted = true;
+    const loadData = async () => {
+      try {
+        const response = await fetch(DATA_API_URL, { cache: "no-store" });
+        if (response.ok) {
+          const payload = await response.json();
+          if (payload?.data?.sheets) {
+            if (!isMounted) return;
+            setData(payload.data);
+            setActiveSheet(payload.data.sheets[0]?.name || "");
+            setHasHeader(Boolean(payload.data.hasHeader));
+            return;
+          }
+        }
+      } catch {
+        // Fall back to local storage if API is unavailable.
       }
-    } catch {
-      localStorage.removeItem(STORAGE_KEY);
-    }
+
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (!stored) return;
+      try {
+        const parsed = JSON.parse(stored);
+        if (parsed?.sheets) {
+          if (!isMounted) return;
+          setData(parsed);
+          setActiveSheet(parsed.sheets[0]?.name || "");
+          setHasHeader(Boolean(parsed.hasHeader));
+          try {
+            await fetch(DATA_API_URL, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ data: parsed }),
+            });
+          } catch {
+            // Ignore migration failures.
+          }
+          localStorage.removeItem(STORAGE_KEY);
+        }
+      } catch {
+        localStorage.removeItem(STORAGE_KEY);
+      }
+    };
+
+    loadData();
+    return () => {
+      isMounted = false;
+    };
   }, []);
+
+  const saveData = async (nextData) => {
+    try {
+      await fetch(DATA_API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ data: nextData }),
+      });
+    } catch {
+      // Ignore save errors to avoid blocking UI updates.
+    }
+  };
+
+  const clearStoredData = async () => {
+    try {
+      await fetch(DATA_API_URL, { method: "DELETE" });
+    } catch {
+      // Ignore delete errors to avoid blocking UI updates.
+    }
+  };
 
   const handleFiles = async (incoming) => {
     const nextFile = incoming?.[0];
@@ -112,9 +193,10 @@ export default function DataPage() {
       setIsParsing(true);
       try {
         const parsed = await readXlsx(nextFile);
-        setData(parsed);
-        setActiveSheet(parsed.sheets[0]?.name || "");
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
+        const nextData = { ...parsed, hasHeader };
+        setData(nextData);
+        setActiveSheet(nextData.sheets[0]?.name || "");
+        await saveData(nextData);
       } catch (err) {
         setError(err.message || "Failed to parse XLSX.");
       } finally {
@@ -136,9 +218,10 @@ export default function DataPage() {
     setError("");
     try {
       const parsed = await readCsv(file, delimiter);
-      setData(parsed);
-      setActiveSheet(parsed.sheets[0]?.name || "");
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
+      const nextData = { ...parsed, hasHeader };
+      setData(nextData);
+      setActiveSheet(nextData.sheets[0]?.name || "");
+      await saveData(nextData);
     } catch (err) {
       setError(err.message || "Failed to parse CSV.");
     } finally {
@@ -150,6 +233,15 @@ export default function DataPage() {
     if (!data?.sheets?.length) return null;
     return data.sheets.find((sheet) => sheet.name === activeSheet);
   }, [data, activeSheet]);
+
+  const activeColumns = useMemo(
+    () => getSheetColumns(activeData, hasHeader),
+    [activeData, hasHeader]
+  );
+  const activeRows = useMemo(
+    () => getSheetRows(activeData, hasHeader),
+    [activeData, hasHeader]
+  );
 
   const isCsv = file?.name?.toLowerCase().endsWith(".csv");
 
@@ -172,10 +264,11 @@ export default function DataPage() {
             <button
               type="button"
               onClick={() => {
-                localStorage.removeItem(STORAGE_KEY);
+                clearStoredData();
                 setData(null);
                 setFile(null);
                 setActiveSheet("");
+                setHasHeader(false);
               }}
               className="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-600 hover:bg-red-100"
             >
@@ -185,124 +278,169 @@ export default function DataPage() {
           )}
         </div>
 
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.1fr,0.9fr]">
-          <section className="rounded-2xl border border-[#e5e5e5] bg-white p-6 shadow-sm">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h2 className="text-base font-semibold text-gray-900">
-                  Upload file
-                </h2>
-                <p className="mt-1 text-xs text-gray-500">
-                  Support `.xlsx` and `.csv`. Parsing dilakukan lokal.
+        {data ? (
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.1fr,0.9fr]">
+            <section className="rounded-2xl border border-[#e5e5e5] bg-white p-6 shadow-sm">
+              <h2 className="text-base font-semibold text-gray-900">
+                Saved data
+              </h2>
+              <div className="mt-3 space-y-2 text-sm text-gray-600">
+                <p>
+                  File: <span className="font-semibold">{data.name}</span>
+                </p>
+                <p>Type: {data.type?.toUpperCase()}</p>
+                <p>
+                  Sheets:{" "}
+                  <span className="font-semibold">
+                    {data.sheets?.length || 0}
+                  </span>
+                </p>
+                <p>Has heading: {data.hasHeader ? "Yes" : "No"}</p>
+                <p>
+                  Updated:{" "}
+                  {data.updatedAt
+                    ? new Date(data.updatedAt).toLocaleString("id-ID")
+                    : "-"}
                 </p>
               </div>
-              <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-3 py-1 text-[11px] font-semibold text-blue-700">
-                Local only
-              </span>
-            </div>
-
-            <label
-              htmlFor="data-file"
-              className="mt-5 flex cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-blue-200 bg-blue-50/50 px-6 py-10 text-center transition hover:border-blue-300"
-              onDragOver={(event) => event.preventDefault()}
-              onDrop={(event) => {
-                event.preventDefault();
-                handleFiles(event.dataTransfer.files);
-              }}
-            >
-              <UploadCloud className="h-8 w-8 text-blue-500" />
-              <div>
-                <p className="text-sm font-semibold text-blue-700">
-                  Drop file here or click to browse
-                </p>
-                <p className="mt-1 text-xs text-blue-500">
-                  CSV membutuhkan delimiter manual
+            </section>
+            <section className="rounded-2xl border border-[#e5e5e5] bg-white p-6 shadow-sm">
+              <h2 className="text-base font-semibold text-gray-900">
+                Table settings
+              </h2>
+              <div className="mt-3 space-y-3 text-sm text-gray-600">
+                <label className="flex items-center gap-3 text-xs font-semibold text-gray-600">
+                  <input
+                    type="checkbox"
+                    checked={hasHeader}
+                    onChange={(event) => {
+                      const nextValue = event.target.checked;
+                      setHasHeader(nextValue);
+                      const nextData = { ...data, hasHeader: nextValue };
+                      setData(nextData);
+                      saveData(nextData);
+                    }}
+                    className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  Has heading (use first row as table header)
+                </label>
+                <p className="text-xs text-gray-500">
+                  Clear data to upload a different file.
                 </p>
               </div>
-              <input
-                id="data-file"
-                type="file"
-                accept=".xlsx,.csv"
-                className="hidden"
-                onChange={(event) => handleFiles(event.target.files)}
-              />
-            </label>
-
-            <div className="mt-5 space-y-3">
-              <div className="flex items-center gap-2 text-sm text-gray-600">
-                <FileSpreadsheet className="h-4 w-4 text-gray-400" />
-                <span>
-                  {file ? file.name : "Belum ada file dipilih"}
+            </section>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.1fr,0.9fr]">
+            <section className="rounded-2xl border border-[#e5e5e5] bg-white p-6 shadow-sm">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h2 className="text-base font-semibold text-gray-900">
+                    Upload file
+                  </h2>
+                  <p className="mt-1 text-xs text-gray-500">
+                    Support `.xlsx` and `.csv`. Parsing dilakukan lokal.
+                  </p>
+                </div>
+                <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-3 py-1 text-[11px] font-semibold text-blue-700">
+                  Local only
                 </span>
               </div>
 
-              {isCsv && (
-                <div className="flex flex-wrap items-center gap-3">
-                  <label className="text-xs font-semibold text-gray-600">
-                    CSV Delimiter
-                  </label>
+              <label
+                htmlFor="data-file"
+                className="mt-5 flex cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-blue-200 bg-blue-50/50 px-6 py-10 text-center transition hover:border-blue-300"
+                onDragOver={(event) => event.preventDefault()}
+                onDrop={(event) => {
+                  event.preventDefault();
+                  handleFiles(event.dataTransfer.files);
+                }}
+              >
+                <UploadCloud className="h-8 w-8 text-blue-500" />
+                <div>
+                  <p className="text-sm font-semibold text-blue-700">
+                    Drop file here or click to browse
+                  </p>
+                  <p className="mt-1 text-xs text-blue-500">
+                    CSV membutuhkan delimiter manual
+                  </p>
+                </div>
+                <input
+                  id="data-file"
+                  type="file"
+                  accept=".xlsx,.csv"
+                  className="hidden"
+                  onChange={(event) => handleFiles(event.target.files)}
+                />
+              </label>
+
+              <div className="mt-5 space-y-3">
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <FileSpreadsheet className="h-4 w-4 text-gray-400" />
+                  <span>
+                    {file ? file.name : "Belum ada file dipilih"}
+                  </span>
+                </div>
+
+                {isCsv && (
+                  <div className="flex flex-wrap items-center gap-3">
+                    <label className="text-xs font-semibold text-gray-600">
+                      CSV Delimiter
+                    </label>
+                    <input
+                      type="text"
+                      value={delimiter}
+                      onChange={(event) => setDelimiter(event.target.value)}
+                      className="w-20 rounded-lg border border-[#e5e5e5] px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder=","
+                    />
+                    <button
+                      type="button"
+                      onClick={handleParseCsv}
+                      disabled={isParsing}
+                      className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold ${
+                        isParsing
+                          ? "bg-blue-100 text-blue-300 cursor-not-allowed"
+                          : "bg-blue-600 text-white hover:bg-blue-700"
+                      }`}
+                    >
+                      {isParsing ? "Parsing..." : "Parse CSV"}
+                    </button>
+                  </div>
+                )}
+
+                <label className="flex items-center gap-3 text-xs font-semibold text-gray-600">
                   <input
-                    type="text"
-                    value={delimiter}
-                    onChange={(event) => setDelimiter(event.target.value)}
-                    className="w-20 rounded-lg border border-[#e5e5e5] px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder=","
+                    type="checkbox"
+                    checked={hasHeader}
+                    onChange={(event) =>
+                      setHasHeader(event.target.checked)
+                    }
+                    className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                   />
-                  <button
-                    type="button"
-                    onClick={handleParseCsv}
-                    disabled={isParsing}
-                    className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold ${
-                      isParsing
-                        ? "bg-blue-100 text-blue-300 cursor-not-allowed"
-                        : "bg-blue-600 text-white hover:bg-blue-700"
-                    }`}
-                  >
-                    {isParsing ? "Parsing..." : "Parse CSV"}
-                  </button>
-                </div>
-              )}
+                  Has heading (use first row as table header)
+                </label>
 
-              {error && (
-                <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-xs text-red-600">
-                  {error}
-                </div>
-              )}
-            </div>
-          </section>
+                {error && (
+                  <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-xs text-red-600">
+                    {error}
+                  </div>
+                )}
+              </div>
+            </section>
 
-          <section className="rounded-2xl border border-[#e5e5e5] bg-white p-6 shadow-sm">
-            <h2 className="text-base font-semibold text-gray-900">
-              Saved data
-            </h2>
-            <div className="mt-3 space-y-2 text-sm text-gray-600">
-              {data ? (
-                <>
-                  <p>
-                    File: <span className="font-semibold">{data.name}</span>
-                  </p>
-                  <p>Type: {data.type?.toUpperCase()}</p>
-                  <p>
-                    Sheets:{" "}
-                    <span className="font-semibold">
-                      {data.sheets?.length || 0}
-                    </span>
-                  </p>
-                  <p>
-                    Updated:{" "}
-                    {data.updatedAt
-                      ? new Date(data.updatedAt).toLocaleString("id-ID")
-                      : "-"}
-                  </p>
-                </>
-              ) : (
+            <section className="rounded-2xl border border-[#e5e5e5] bg-white p-6 shadow-sm">
+              <h2 className="text-base font-semibold text-gray-900">
+                Saved data
+              </h2>
+              <div className="mt-3 space-y-2 text-sm text-gray-600">
                 <p className="text-gray-400">
                   Import data untuk melihat ringkasan di sini.
                 </p>
-              )}
-            </div>
-          </section>
-        </div>
+              </div>
+            </section>
+          </div>
+        )}
 
         {data?.sheets?.length ? (
           <section className="rounded-2xl border border-[#e5e5e5] bg-white shadow-sm">
@@ -333,9 +471,9 @@ export default function DataPage() {
                       <th className="sticky left-0 z-20 border border-[#e5e5e5] bg-gray-50 px-3 py-2 text-[11px] font-semibold text-gray-500">
                         #
                       </th>
-                      {activeData.columns.map((col) => (
+                      {activeColumns.map((col, index) => (
                         <th
-                          key={col}
+                          key={`${col}-${index}`}
                           className="border border-[#e5e5e5] px-3 py-2 text-[11px] font-semibold text-gray-500"
                         >
                           {col}
@@ -344,7 +482,7 @@ export default function DataPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {activeData.rows.map((row, rowIndex) => {
+                    {activeRows.map((row, rowIndex) => {
                       const isEven = rowIndex % 2 === 0;
                       return (
                         <tr
@@ -356,9 +494,9 @@ export default function DataPage() {
                               isEven ? "bg-white" : "bg-gray-50"
                             }`}
                           >
-                          {rowIndex + 1}
+                            {rowIndex + 1}
                           </td>
-                          {activeData.columns.map((_, colIndex) => (
+                          {activeColumns.map((_, colIndex) => (
                             <td
                               key={`cell-${rowIndex}-${colIndex}`}
                               className="border border-[#e5e5e5] px-3 py-2"
