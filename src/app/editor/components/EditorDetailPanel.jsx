@@ -1,28 +1,64 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { MousePointer2, Info } from "lucide-react";
 import { ActionDetails, actionTypes } from "../ActionDetails";
 
 export default function EditorDetailPanel({
   detailKey,
-  detailTitle,
   selectedStepData,
   selectedStep,
+  groupName,
+  stepName,
   onOpenHelp,
   onStepChange,
 }) {
+  const panelRef = useRef(null);
+
+  useEffect(() => {
+    const node = panelRef.current;
+    if (!node) return;
+    node.classList.remove("detail-flash");
+    void node.offsetHeight;
+    node.classList.add("detail-flash");
+  }, [detailKey]);
+
   return (
     <div
       key={detailKey}
+      ref={panelRef}
       className="bg-white border border-[#e5e5e5] rounded-lg p-6 transition-[box-shadow,border-color] duration-300 detail-flash"
     >
       <div className="flex items-start justify-between gap-4">
-        <h2
-          key={detailTitle}
-          className="text-base font-semibold text-gray-900 detail-title"
-        >
-          {detailTitle}
-        </h2>
+        <div>
+          <h2
+            key={detailKey}
+            className="text-base font-semibold text-gray-900 detail-title"
+          >
+            Detail
+          </h2>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            {groupName ? (
+              <span className="inline-flex items-center rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
+                {groupName}
+              </span>
+            ) : (
+              <span className="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-500">
+                No group
+              </span>
+            )}
+            <span className="text-xs font-semibold text-gray-400">›</span>
+            {stepName ? (
+              <span className="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700">
+                {stepName}
+              </span>
+            ) : (
+              <span className="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-500">
+                No step
+              </span>
+            )}
+          </div>
+        </div>
         <button
           type="button"
           onClick={onOpenHelp}

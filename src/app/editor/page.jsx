@@ -73,10 +73,6 @@ export default function EditorPage() {
   const selectedGroup = groups.find(
     (group) => group.id === selectedStep.groupId
   );
-  const detailTitle =
-    selectedGroup && selectedStepData
-      ? `Detail > ${selectedGroup.name} > ${selectedStepData.title}`
-      : "Detail";
 
   const isBlank = (value) => {
     if (value === 0) return false;
@@ -393,10 +389,12 @@ export default function EditorPage() {
             />
             <section className="space-y-6">
               <EditorDetailPanel
+                key={detailKey}
                 detailKey={detailKey}
-                detailTitle={detailTitle}
                 selectedStepData={selectedStepData}
                 selectedStep={selectedStep}
+                groupName={selectedGroup?.name || ""}
+                stepName={selectedStepData?.title || ""}
                 onOpenHelp={() => setShowInputHelp(true)}
                 onStepChange={handleStepChange}
               />

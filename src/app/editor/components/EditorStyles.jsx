@@ -2,7 +2,7 @@
 
 export default function EditorStyles() {
   return (
-    <style jsx>{`
+    <style jsx global>{`
       @keyframes detailFlash {
         0% {
           background-color: #eff6ff;
