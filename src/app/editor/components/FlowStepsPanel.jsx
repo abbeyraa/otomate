@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   ChevronDown,
   ChevronRight,
@@ -41,6 +42,14 @@ export default function FlowStepsPanel({
   onStepDrop,
   onOpenRepeatModal,
 }) {
+  const [emptyDropGroupId, setEmptyDropGroupId] = useState("");
+  const [hoveredGroupId, setHoveredGroupId] = useState("");
+  const [stepDropTarget, setStepDropTarget] = useState({
+    groupId: "",
+    stepId: "",
+    position: "after",
+  });
+
   return (
     <section className="bg-white border border-[#e5e5e5] rounded-lg overflow-hidden">
       <div className="px-6 py-4 border-b border-[#e5e5e5] flex items-center justify-between">
@@ -91,12 +100,29 @@ export default function FlowStepsPanel({
         {groups.map((group) => (
           <div
             key={group.id}
-            onDragOver={(event) => event.preventDefault()}
-            onDrop={(event) => onGroupDrop(event, group.id)}
+            onDragOver={(event) => {
+              event.preventDefault();
+              setHoveredGroupId(group.id);
+            }}
+            onDragLeave={() => {
+              setHoveredGroupId((current) =>
+                current === group.id ? "" : current
+              );
+            }}
+            onDrop={(event) => {
+              onGroupDrop(event, group.id);
+              setHoveredGroupId("");
+            }}
+            className="relative"
           >
+            {draggedGroupSectionId && hoveredGroupId === group.id && (
+              <div className="absolute left-0 right-0 top-0 h-0.5 bg-blue-400" />
+            )}
             <div
               className={`px-6 py-4 bg-gray-50 flex items-center justify-between ${
-                draggedGroupSectionId === group.id ? "bg-blue-50" : ""
+                draggedGroupSectionId === group.id || hoveredGroupId === group.id
+                  ? "bg-blue-50"
+                  : ""
               } ${lastAddedGroupId === group.id ? "group-added" : ""}`}
             >
               <div className="flex items-center gap-3">
@@ -176,7 +202,41 @@ export default function FlowStepsPanel({
                 <div className="divide-y divide-[#e5e5e5]">
                   {group.steps.length === 0 ? (
                     <div className="px-6 py-4">
-                      <div className="rounded-lg border border-dashed border-[#e5e5e5] bg-gray-50 px-4 py-4 text-sm text-gray-500">
+                      <div
+                        className={`rounded-lg border border-dashed px-4 py-4 text-sm transition ${
+                          emptyDropGroupId === group.id
+                            ? "border-blue-300 bg-blue-50 text-blue-600"
+                            : "border-[#e5e5e5] bg-gray-50 text-gray-500"
+                        }`}
+                        onDragOver={(event) => {
+                          event.preventDefault();
+                          setEmptyDropGroupId(group.id);
+                          setStepDropTarget({
+                            groupId: group.id,
+                            stepId: "",
+                            position: "after",
+                          });
+                        }}
+                        onDragLeave={() => {
+                          setEmptyDropGroupId((current) =>
+                            current === group.id ? "" : current
+                          );
+                          setStepDropTarget((current) =>
+                            current.groupId === group.id
+                              ? { groupId: "", stepId: "" }
+                              : current
+                          );
+                        }}
+                        onDrop={(event) => {
+                          onStepDrop(event, group.id, "");
+                          setEmptyDropGroupId("");
+                          setStepDropTarget({
+                            groupId: "",
+                            stepId: "",
+                            position: "after",
+                          });
+                        }}
+                      >
                         Blank step — add a step to start editing.
                       </div>
                     </div>
@@ -189,30 +249,69 @@ export default function FlowStepsPanel({
                       return (
                         <div
                           key={step.id}
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            onSelectStep(group.id, step.id);
-                          }}
-                          onDragStart={(event) =>
-                            onStepDragStart(event, group.id, step.id)
-                          }
-                          onDragOver={(event) => event.preventDefault()}
-                          onDrop={(event) =>
-                            onStepDrop(event, group.id, step.id)
-                          }
-                          onDragEnd={onStepDragEnd}
-                          draggable
-                          role="button"
-                          tabIndex={0}
-                          data-step-row="true"
-                          className={`relative w-full text-left pl-6 pr-6 py-4 transition-colors cursor-pointer rounded-md ${
-                            isInvalid
-                              ? "bg-red-50 ring-1 ring-red-200"
-                              : isSelected
-                              ? "bg-blue-50 ring-1 ring-blue-200"
-                              : "hover:bg-gray-50"
-                          }`}
-                        >
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          onSelectStep(group.id, step.id);
+                        }}
+                        onDragStart={(event) =>
+                          onStepDragStart(event, group.id, step.id)
+                        }
+                        onDragOver={(event) => {
+                          event.preventDefault();
+                          const rect = event.currentTarget.getBoundingClientRect();
+                          const offset = event.clientY - rect.top;
+                          const position =
+                            offset < rect.height / 2 ? "before" : "after";
+                          setStepDropTarget({
+                            groupId: group.id,
+                            stepId: step.id,
+                            position,
+                          });
+                        }}
+                        onDragLeave={() => {
+                          setStepDropTarget((current) =>
+                            current.groupId === group.id &&
+                            current.stepId === step.id
+                              ? { groupId: "", stepId: "" }
+                              : current
+                          );
+                        }}
+                        onDrop={(event) => {
+                          onStepDrop(
+                            event,
+                            group.id,
+                            step.id,
+                            stepDropTarget.position
+                          );
+                          setStepDropTarget({
+                            groupId: "",
+                            stepId: "",
+                            position: "after",
+                          });
+                        }}
+                        onDragEnd={onStepDragEnd}
+                        draggable
+                        role="button"
+                        tabIndex={0}
+                        data-step-row="true"
+                        className={`relative w-full text-left pl-6 pr-6 py-4 transition-colors cursor-pointer rounded-md ${
+                          isInvalid
+                            ? "bg-red-50 ring-1 ring-red-200"
+                            : isSelected
+                            ? "bg-blue-50 ring-1 ring-blue-200"
+                            : "hover:bg-gray-50"
+                        }`}
+                      >
+                        {stepDropTarget.groupId === group.id &&
+                          stepDropTarget.stepId === step.id && (
+                            <div
+                              className={`absolute left-6 right-6 h-0.5 bg-blue-400 ${
+                                stepDropTarget.position === "before"
+                                  ? "top-0"
+                                  : "bottom-0"
+                              }`}
+                            />
+                          )}
                           <span
                             className={`absolute left-0 top-3 bottom-3 w-1 rounded-r bg-blue-500 origin-center transition-transform duration-200 ease-out ${
                               isSelected

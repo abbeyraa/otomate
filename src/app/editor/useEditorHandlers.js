@@ -303,7 +303,12 @@ export function useEditorHandlers(templateId = "") {
     setDraggedGroupId(null);
   };
 
-  const handleDrop = (event, targetGroupId, targetStepId) => {
+  const handleDrop = (
+    event,
+    targetGroupId,
+    targetStepId = "",
+    position = "after"
+  ) => {
     event.preventDefault();
     const payload = event.dataTransfer.getData("text/plain");
     if (payload.startsWith("template:")) {
@@ -336,24 +341,38 @@ export function useEditorHandlers(templateId = "") {
 
     const [dragGroupId, draggedStepId] = payload.split(":");
     if (!draggedStepId || draggedStepId === targetStepId) return;
-    if (dragGroupId !== targetGroupId) return;
 
-    setGroups((prev) =>
-      prev.map((group) => {
-        if (group.id !== targetGroupId) return group;
+    setGroups((prev) => {
+      let movedStep = null;
+      const withoutSource = prev.map((group) => {
+        if (group.id !== dragGroupId) return group;
         const draggedIndex = group.steps.findIndex(
           (step) => step.id === draggedStepId
         );
-        const targetIndex = group.steps.findIndex(
+        if (draggedIndex === -1) return group;
+        const nextSteps = [...group.steps];
+        [movedStep] = nextSteps.splice(draggedIndex, 1);
+        return { ...group, steps: nextSteps };
+      });
+
+      if (!movedStep) return prev;
+
+      return withoutSource.map((group) => {
+        if (group.id !== targetGroupId) return group;
+        const nextSteps = [...group.steps];
+        const targetIndex = nextSteps.findIndex(
           (step) => step.id === targetStepId
         );
-        if (draggedIndex === -1 || targetIndex === -1) return group;
-        const nextSteps = [...group.steps];
-        const [moved] = nextSteps.splice(draggedIndex, 1);
-        nextSteps.splice(targetIndex, 0, moved);
+        if (targetIndex === -1) {
+          nextSteps.push(movedStep);
+        } else {
+          const insertIndex =
+            position === "before" ? targetIndex : targetIndex + 1;
+          nextSteps.splice(insertIndex, 0, movedStep);
+        }
         return { ...group, steps: nextSteps };
-      })
-    );
+      });
+    });
   };
 
   const handleGroupNameChange = (groupId, value) => {
