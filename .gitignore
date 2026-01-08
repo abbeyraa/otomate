@@ -60,9 +60,7 @@ htmlcov/
 nosetests.xml
 coverage.xml
 # === Database files ===
-*.db
-*.sqlite
-*.sqlite3
+data-source.json
 # === Playwright ===
 test-results/
 playwright-report/
