@@ -284,7 +284,7 @@ export default function EditorPage() {
                   Reset
                 </button>
                 {showResetMenu && (
-                  <div className="absolute right-0 mt-2 w-48 rounded-lg border border-[#e5e5e5] bg-white shadow-lg menu-pop">
+                  <div className="absolute right-0 mt-2 w-48 rounded-lg border border-[#e5e5e5] bg-white shadow-lg menu-pop z-50">
                     <button
                       type="button"
                       onClick={() => {
