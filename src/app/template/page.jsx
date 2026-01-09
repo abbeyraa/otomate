@@ -1,19 +1,25 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { deleteTemplateById, getTemplates } from "./templateStorage";
 
 const TEMPLATE_OPEN_KEY = "otomate_template_open";
 
 export default function TemplatesPage() {
-  const [templates, setTemplates] = useState(() => getTemplates());
+  const [templates, setTemplates] = useState([]);
   const [openError, setOpenError] = useState("");
   const [showLoadPrompt, setShowLoadPrompt] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState(null);
   const [showDeletePrompt, setShowDeletePrompt] = useState(false);
   const [templateToDelete, setTemplateToDelete] = useState(null);
+  const [isHydrated, setIsHydrated] = useState(false);
   const router = useRouter();
+
+  useEffect(() => {
+    setTemplates(getTemplates());
+    setIsHydrated(true);
+  }, []);
 
   const handleDelete = () => {
     if (!templateToDelete?.id) return;
@@ -47,7 +53,7 @@ export default function TemplatesPage() {
         <div className="flex items-center justify-between">
           <h1 className="text-lg font-semibold text-gray-900">Template</h1>
           <span className="text-xs text-gray-500">
-            {templates.length} tersimpan
+            {isHydrated ? `${templates.length} tersimpan` : "..."}
           </span>
         </div>
         <div className="bg-white border border-[#e5e5e5] rounded-lg">
