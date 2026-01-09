@@ -246,7 +246,6 @@ export function useEditorHandlers(templateId = "") {
       dateFormat: "",
       value: "",
       label: "",
-      timeoutMs: "5000",
       waitMs: "",
       url: "",
     };
@@ -651,7 +650,6 @@ export function useEditorHandlers(templateId = "") {
           dateFormat: "",
           value: "",
           label: "",
-          timeoutMs: "5000",
           waitMs: "",
           url: logEvent.data?.url || "",
         };
@@ -670,7 +668,6 @@ export function useEditorHandlers(templateId = "") {
             logEvent.data?.text ||
             logEvent.data?.selector ||
             "",
-          timeoutMs: "5000",
           waitMs: "",
           url: "",
         };

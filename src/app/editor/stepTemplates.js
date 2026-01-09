@@ -12,7 +12,6 @@ export const stepTemplates = [
       dateFormat: "",
       value: "root",
       label: "Username",
-      timeoutMs: "5000",
       waitMs: "",
       url: "",
     },

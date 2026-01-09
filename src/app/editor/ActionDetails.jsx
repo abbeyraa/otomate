@@ -91,18 +91,6 @@ export function ActionDetails({
               className="w-full rounded-lg border border-[#e5e5e5] px-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-2">
-              Timeout (ms)
-            </label>
-            <input
-              type="number"
-              placeholder="5000"
-              value={selectedStepData.timeoutMs}
-              onChange={(event) => onChange("timeoutMs", event.target.value)}
-              className="w-full rounded-lg border border-[#e5e5e5] px-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
         </div>
       );
     case "Input":
@@ -199,18 +187,6 @@ export function ActionDetails({
               />
             </div>
           )}
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-2">
-              Timeout (ms)
-            </label>
-            <input
-              type="number"
-              placeholder="5000"
-              value={selectedStepData.timeoutMs}
-              onChange={(event) => onChange("timeoutMs", event.target.value)}
-              className="w-full rounded-lg border border-[#e5e5e5] px-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
         </div>
       );
     case "Wait":
@@ -241,18 +217,6 @@ export function ActionDetails({
             onChange={(event) => onChange("url", event.target.value)}
             className="w-full rounded-lg border border-[#e5e5e5] px-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-2">
-              Timeout (ms)
-            </label>
-            <input
-              type="number"
-              placeholder="5000"
-              value={selectedStepData.timeoutMs}
-              onChange={(event) => onChange("timeoutMs", event.target.value)}
-              className="w-full rounded-lg border border-[#e5e5e5] px-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
         </div>
       );
     default:

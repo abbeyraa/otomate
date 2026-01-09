@@ -108,7 +108,6 @@ const baseStepFields = {
   dateFormat: "",
   value: "",
   label: "",
-  timeoutMs: "5000",
   waitMs: "",
   url: "",
 };
