@@ -5,6 +5,7 @@ import {
   ChevronDown,
   ChevronRight,
   FilePlus,
+  FileText,
   GripVertical,
   Trash2,
   FolderPlus,
@@ -41,6 +42,7 @@ export default function FlowStepsPanel({
   onStepDragEnd,
   onStepDrop,
   onOpenRepeatModal,
+  onAddFormInput,
 }) {
   const [emptyDropGroupId, setEmptyDropGroupId] = useState("");
   const [hoveredGroupId, setHoveredGroupId] = useState("");
@@ -97,36 +99,39 @@ export default function FlowStepsPanel({
         </div>
       </div>
       <div className="divide-y divide-[#e5e5e5]">
-        {groups.map((group) => (
-          <div
-            key={group.id}
-            onDragOver={(event) => {
-              event.preventDefault();
-              setHoveredGroupId(group.id);
-            }}
-            onDragLeave={() => {
-              setHoveredGroupId((current) =>
-                current === group.id ? "" : current
-              );
-            }}
-            onDrop={(event) => {
-              onGroupDrop(event, group.id);
-              setHoveredGroupId("");
-            }}
-            className="relative"
-          >
-            {draggedGroupSectionId && hoveredGroupId === group.id && (
-              <div className="absolute left-0 right-0 top-0 h-0.5 bg-blue-400" />
-            )}
-                    <div
-                      className={`px-6 py-4 bg-gray-50 flex items-center justify-between ${
-                        draggedGroupSectionId === group.id || hoveredGroupId === group.id
-                          ? "bg-blue-50"
-                          : ""
-                      } ${lastAddedGroupId === group.id ? "group-added" : ""} ${
-                        draggedGroupSectionId === group.id ? "is-dragging" : ""
-                      }`}
-                    >
+        {groups.map((group) => {
+          const repeatConfig = getRepeatConfig(group);
+          return (
+            <div
+              key={group.id}
+              onDragOver={(event) => {
+                event.preventDefault();
+                setHoveredGroupId(group.id);
+              }}
+              onDragLeave={() => {
+                setHoveredGroupId((current) =>
+                  current === group.id ? "" : current
+                );
+              }}
+              onDrop={(event) => {
+                onGroupDrop(event, group.id);
+                setHoveredGroupId("");
+              }}
+              className="relative"
+            >
+              {draggedGroupSectionId && hoveredGroupId === group.id && (
+                <div className="absolute left-0 right-0 top-0 h-0.5 bg-blue-400" />
+              )}
+              <div
+                className={`px-6 py-4 bg-gray-50 flex items-center justify-between ${
+                  draggedGroupSectionId === group.id ||
+                  hoveredGroupId === group.id
+                    ? "bg-blue-50"
+                    : ""
+                } ${lastAddedGroupId === group.id ? "group-added" : ""} ${
+                  draggedGroupSectionId === group.id ? "is-dragging" : ""
+                }`}
+              >
               <div className="flex items-center gap-3">
                 <button
                   type="button"
@@ -155,12 +160,12 @@ export default function FlowStepsPanel({
                   type="button"
                   onClick={() => onOpenRepeatModal(group)}
                   className={`inline-flex h-7 w-7 items-center justify-center rounded-md border ${
-                    getRepeatConfig(group).enabled
+                    repeatConfig.enabled
                       ? "border-amber-200 bg-amber-100 text-amber-700"
                       : "border-[#e5e5e5] bg-white text-gray-400 hover:bg-gray-50"
                   }`}
                   title={
-                    getRepeatConfig(group).enabled
+                    repeatConfig.enabled
                       ? "Repeat group enabled"
                       : "Repeat group disabled"
                   }
@@ -168,8 +173,7 @@ export default function FlowStepsPanel({
                 >
                   <span className="relative inline-flex">
                     <Repeat className="h-4 w-4" />
-                    {getRepeatConfig(group).enabled &&
-                      getRepeatConfig(group).useData && (
+                    {repeatConfig.enabled && repeatConfig.useData && (
                         <span className="absolute -right-2 -top-2 rounded-full bg-white p-0.5 text-blue-600 shadow-sm">
                           <Database className="h-3 w-3" />
                         </span>
@@ -369,20 +373,33 @@ export default function FlowStepsPanel({
                     })
                   )}
                   <div className="pl-6 pr-6 py-4">
-                    <button
-                      type="button"
-                      className="inline-flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100"
-                      onClick={() => onAddStep(group.id)}
-                    >
-                      <FilePlus className="w-4 h-4" />
-                      Add Step
-                    </button>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        className="inline-flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100"
+                        onClick={() => onAddStep(group.id)}
+                      >
+                        <FilePlus className="w-4 h-4" />
+                        Add Step
+                      </button>
+                      {repeatConfig.enabled && repeatConfig.mode === "data" && (
+                        <button
+                          type="button"
+                          className="inline-flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                          onClick={() => onAddFormInput(group.id)}
+                        >
+                          <FileText className="w-4 h-4" />
+                          Add Form Input
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
             )}
           </div>
-        ))}
+        );
+        })}
       </div>
     </section>
   );

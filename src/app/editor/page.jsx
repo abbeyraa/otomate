@@ -10,6 +10,7 @@ import SaveConfirmModal from "./modals/SaveConfirmModal";
 import EditorDetailPanel from "./components/EditorDetailPanel";
 import InputHelpModal from "./modals/InputHelpModal";
 import RepeatModal from "./modals/RepeatModal";
+import FormInputModal from "./modals/FormInputModal";
 import FlowStepsPanel from "./components/FlowStepsPanel";
 import EditorStyles from "./components/EditorStyles";
 import { PlayCircle, FileText, User, Search } from "lucide-react";
@@ -63,6 +64,7 @@ export default function EditorPage() {
     handleGroupDragStart,
     handleGroupDragEnd,
     handleGroupDrop,
+    handleAddSteps,
     runInspect,
     runSteps,
     loadLogs,
@@ -137,6 +139,7 @@ export default function EditorPage() {
 
   const detailKey = `${selectedStep.groupId}-${selectedStep.stepId}`;
   const [repeatModalGroupId, setRepeatModalGroupId] = useState("");
+  const [formInputModalGroupId, setFormInputModalGroupId] = useState("");
   const [repeatDraftCount, setRepeatDraftCount] = useState("1");
   const [repeatDraftMode, setRepeatDraftMode] = useState("count");
   const [dataSummary, setDataSummary] = useState({
@@ -425,6 +428,7 @@ export default function EditorPage() {
               onStepDragEnd={handleStepDragEnd}
               onStepDrop={handleDrop}
               onOpenRepeatModal={openRepeatModal}
+              onAddFormInput={(groupId) => setFormInputModalGroupId(groupId)}
             />
             <section className="space-y-6">
               <EditorDetailPanel
@@ -471,6 +475,11 @@ export default function EditorPage() {
               });
               closeRepeatModal();
             }}
+          />
+          <FormInputModal
+            open={Boolean(formInputModalGroupId)}
+            onClose={() => setFormInputModalGroupId("")}
+            onCreate={(steps) => handleAddSteps(formInputModalGroupId, steps)}
           />
         </div>
       </div>
