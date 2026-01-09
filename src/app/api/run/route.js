@@ -109,6 +109,8 @@ export async function POST(request) {
   const payload = await request.json().catch(() => ({}));
   const targetUrl = payload.targetUrl?.trim() || "";
   const groups = Array.isArray(payload.groups) ? payload.groups : [];
+  const firstStep = groups.find((group) => group?.steps?.length)?.steps?.[0];
+  const shouldAutoNavigate = Boolean(targetUrl) && firstStep?.type !== "Navigate";
 
   const report = {
     type: "run",
@@ -122,17 +124,11 @@ export async function POST(request) {
 
   const browser = await chromium.launch({ headless: false });
   const context = await browser.newContext(getPlaywrightContextOptions());
-  await context.clearCookies();
   const page = await context.newPage();
-  await page.addInitScript(() => {
-    // Ensure a clean, incognito-like state for every run.
-    window.localStorage?.clear();
-    window.sessionStorage?.clear();
-  });
   await page.bringToFront();
 
   try {
-    if (targetUrl) {
+    if (shouldAutoNavigate) {
       await page.goto(targetUrl, { waitUntil: "domcontentloaded" });
       await page.bringToFront();
       report.steps.push({
@@ -201,7 +197,10 @@ export async function POST(request) {
                   inputKind === "date"
                     ? formatDateValue(rawValue, step.dateFormat)
                     : rawValue;
-                await locator.fill(finalValue);
+                await locator.click({ timeout: timeoutMs });
+                await locator.press("Control+A");
+                await locator.press("Backspace");
+                await locator.pressSequentially(finalValue, { delay: 100 });
               }
               break;
             case "Wait":

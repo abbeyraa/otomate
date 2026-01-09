@@ -146,6 +146,7 @@ export default function EditorPage() {
     rowsTotal: 0,
     hasHeader: false,
   });
+  const [dataHeaders, setDataHeaders] = useState([]);
 
   const getRepeatConfig = (group) => {
     const repeat = group.repeat || {};
@@ -156,6 +157,39 @@ export default function EditorPage() {
       useData: repeat.useData ?? true,
     };
   };
+
+  const toColumnLabel = (index) => {
+    let label = "";
+    let value = index + 1;
+    while (value > 0) {
+      const remainder = (value - 1) % 26;
+      label = String.fromCharCode(65 + remainder) + label;
+      value = Math.floor((value - 1) / 26);
+    }
+    return label;
+  };
+
+  const getSheetColumns = (sheet, hasHeader) => {
+    if (!sheet) return [];
+    const maxColumns = sheet.maxColumns ?? sheet.columns?.length ?? 0;
+    if (hasHeader && sheet.rows?.length) {
+      const headerRow = Array.isArray(sheet.rows[0]) ? sheet.rows[0] : [];
+      return Array.from({ length: maxColumns }, (_, index) => {
+        const raw = headerRow[index];
+        const cleaned =
+          raw === null || raw === undefined ? "" : String(raw).trim();
+        return cleaned || sheet.columns?.[index] || toColumnLabel(index);
+      });
+    }
+    if (sheet.columns?.length) return sheet.columns;
+    return Array.from({ length: maxColumns }, (_, index) =>
+      toColumnLabel(index)
+    );
+  };
+
+  const selectedRepeat = selectedGroup ? getRepeatConfig(selectedGroup) : null;
+  const isSelectedRepeatByData =
+    selectedRepeat?.enabled && selectedRepeat?.mode === "data";
 
   const openRepeatModal = (group) => {
     const repeat = getRepeatConfig(group);
@@ -184,6 +218,10 @@ export default function EditorPage() {
         const rowsTotal = Math.max(0, rawRows - (hasHeader ? 1 : 0));
         if (!isMounted) return;
         setDataSummary({ rowsTotal, hasHeader });
+        const headers = getSheetColumns(firstSheet, hasHeader)
+          .map((item) => String(item || "").trim())
+          .filter(Boolean);
+        setDataHeaders(Array.from(new Set(headers)));
       } catch {
         // Ignore data load failures.
       }
@@ -438,6 +476,8 @@ export default function EditorPage() {
                 selectedStep={selectedStep}
                 groupName={selectedGroup?.name || ""}
                 stepName={selectedStepData?.title || ""}
+                dataHeaders={dataHeaders}
+                isRepeatByData={isSelectedRepeatByData}
                 onOpenHelp={() => setShowInputHelp(true)}
                 onStepChange={handleStepChange}
               />
