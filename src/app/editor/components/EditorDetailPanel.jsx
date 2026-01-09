@@ -10,6 +10,8 @@ export default function EditorDetailPanel({
   selectedStep,
   groupName,
   stepName,
+  dataHeaders,
+  isRepeatByData,
   onOpenHelp,
   onStepChange,
 }) {
@@ -138,6 +140,8 @@ export default function EditorDetailPanel({
           <div className="space-y-4">
             <ActionDetails
               selectedStepData={selectedStepData}
+              dataHeaders={dataHeaders}
+              isRepeatByData={isRepeatByData}
               onChange={(key, value) =>
                 onStepChange(
                   selectedStep.groupId,

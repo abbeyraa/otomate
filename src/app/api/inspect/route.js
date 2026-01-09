@@ -3,6 +3,7 @@ import { chromium } from "playwright";
 import fs from "fs/promises";
 import path from "path";
 import { getPlaywrightContextOptions } from "../playwright-options.js";
+import { readSettings } from "../settings/settingsStorage.js";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -35,8 +36,9 @@ export async function POST(request) {
   const events = [];
   const startedAt = new Date().toISOString();
 
+  const settings = await readSettings();
   const browser = await chromium.launch({ headless: false });
-  const context = await browser.newContext(getPlaywrightContextOptions());
+  const context = await browser.newContext(getPlaywrightContextOptions(settings));
   await context.clearCookies();
   const page = await context.newPage();
   await page.addInitScript(() => {

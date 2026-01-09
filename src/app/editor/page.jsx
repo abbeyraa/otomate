@@ -10,10 +10,38 @@ import SaveConfirmModal from "./modals/SaveConfirmModal";
 import EditorDetailPanel from "./components/EditorDetailPanel";
 import InputHelpModal from "./modals/InputHelpModal";
 import RepeatModal from "./modals/RepeatModal";
+import FormInputModal from "./modals/FormInputModal";
 import FlowStepsPanel from "./components/FlowStepsPanel";
 import EditorStyles from "./components/EditorStyles";
 import { PlayCircle, FileText, User, Search } from "lucide-react";
 import { stepTemplates } from "./stepTemplates";
+
+const toColumnLabel = (index) => {
+  let label = "";
+  let value = index + 1;
+  while (value > 0) {
+    const remainder = (value - 1) % 26;
+    label = String.fromCharCode(65 + remainder) + label;
+    value = Math.floor((value - 1) / 26);
+  }
+  return label;
+};
+
+const getSheetColumns = (sheet, hasHeader) => {
+  if (!sheet) return [];
+  const maxColumns = sheet.maxColumns ?? sheet.columns?.length ?? 0;
+  if (hasHeader && sheet.rows?.length) {
+    const headerRow = Array.isArray(sheet.rows[0]) ? sheet.rows[0] : [];
+    return Array.from({ length: maxColumns }, (_, index) => {
+      const raw = headerRow[index];
+      const cleaned =
+        raw === null || raw === undefined ? "" : String(raw).trim();
+      return cleaned || sheet.columns?.[index] || toColumnLabel(index);
+    });
+  }
+  if (sheet.columns?.length) return sheet.columns;
+  return Array.from({ length: maxColumns }, (_, index) => toColumnLabel(index));
+};
 
 export default function EditorPage() {
   const [showSavePrompt, setShowSavePrompt] = useState(false);
@@ -63,6 +91,7 @@ export default function EditorPage() {
     handleGroupDragStart,
     handleGroupDragEnd,
     handleGroupDrop,
+    handleAddSteps,
     runInspect,
     runSteps,
     loadLogs,
@@ -137,12 +166,14 @@ export default function EditorPage() {
 
   const detailKey = `${selectedStep.groupId}-${selectedStep.stepId}`;
   const [repeatModalGroupId, setRepeatModalGroupId] = useState("");
+  const [formInputModalGroupId, setFormInputModalGroupId] = useState("");
   const [repeatDraftCount, setRepeatDraftCount] = useState("1");
   const [repeatDraftMode, setRepeatDraftMode] = useState("count");
   const [dataSummary, setDataSummary] = useState({
     rowsTotal: 0,
     hasHeader: false,
   });
+  const [dataHeaders, setDataHeaders] = useState([]);
 
   const getRepeatConfig = (group) => {
     const repeat = group.repeat || {};
@@ -153,6 +184,12 @@ export default function EditorPage() {
       useData: repeat.useData ?? true,
     };
   };
+
+ 
+
+  const selectedRepeat = selectedGroup ? getRepeatConfig(selectedGroup) : null;
+  const isSelectedRepeatByData =
+    selectedRepeat?.enabled && selectedRepeat?.mode === "data";
 
   const openRepeatModal = (group) => {
     const repeat = getRepeatConfig(group);
@@ -181,6 +218,10 @@ export default function EditorPage() {
         const rowsTotal = Math.max(0, rawRows - (hasHeader ? 1 : 0));
         if (!isMounted) return;
         setDataSummary({ rowsTotal, hasHeader });
+        const headers = getSheetColumns(firstSheet, hasHeader)
+          .map((item) => String(item || "").trim())
+          .filter(Boolean);
+        setDataHeaders(Array.from(new Set(headers)));
       } catch {
         // Ignore data load failures.
       }
@@ -425,6 +466,7 @@ export default function EditorPage() {
               onStepDragEnd={handleStepDragEnd}
               onStepDrop={handleDrop}
               onOpenRepeatModal={openRepeatModal}
+              onAddFormInput={(groupId) => setFormInputModalGroupId(groupId)}
             />
             <section className="space-y-6">
               <EditorDetailPanel
@@ -434,6 +476,8 @@ export default function EditorPage() {
                 selectedStep={selectedStep}
                 groupName={selectedGroup?.name || ""}
                 stepName={selectedStepData?.title || ""}
+                dataHeaders={dataHeaders}
+                isRepeatByData={isSelectedRepeatByData}
                 onOpenHelp={() => setShowInputHelp(true)}
                 onStepChange={handleStepChange}
               />
@@ -471,6 +515,11 @@ export default function EditorPage() {
               });
               closeRepeatModal();
             }}
+          />
+          <FormInputModal
+            open={Boolean(formInputModalGroupId)}
+            onClose={() => setFormInputModalGroupId("")}
+            onCreate={(steps) => handleAddSteps(formInputModalGroupId, steps)}
           />
         </div>
       </div>

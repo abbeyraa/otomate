@@ -2,7 +2,12 @@
 
 const actionTypes = ["Click", "Input", "Wait", "Navigate"];
 
-export function ActionDetails({ selectedStepData, onChange }) {
+export function ActionDetails({
+  selectedStepData,
+  dataHeaders,
+  isRepeatByData,
+  onChange,
+}) {
   if (!selectedStepData) {
     return (
       <div className="rounded-lg border border-dashed border-[#e5e5e5] p-4 text-sm text-gray-500">
@@ -86,18 +91,6 @@ export function ActionDetails({ selectedStepData, onChange }) {
               className="w-full rounded-lg border border-[#e5e5e5] px-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-2">
-              Timeout (ms)
-            </label>
-            <input
-              type="number"
-              placeholder="5000"
-              value={selectedStepData.timeoutMs}
-              onChange={(event) => onChange("timeoutMs", event.target.value)}
-              className="w-full rounded-lg border border-[#e5e5e5] px-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
         </div>
       );
     case "Input":
@@ -149,13 +142,34 @@ export function ActionDetails({ selectedStepData, onChange }) {
             <label className="block text-xs font-medium text-gray-600 mb-2">
               {inputValueLabel}
             </label>
-            <input
-              type="text"
-              placeholder={inputValuePlaceholder}
-              value={selectedStepData.value}
-              onChange={(event) => onChange("value", event.target.value)}
-              className="w-full rounded-lg border border-[#e5e5e5] px-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+            {isRepeatByData ? (
+              <select
+                value={selectedStepData.value}
+                onChange={(event) => onChange("value", event.target.value)}
+                className="w-full rounded-lg border border-[#e5e5e5] px-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                {dataHeaders?.length ? (
+                  <>
+                    <option value="">Select data header</option>
+                    {dataHeaders.map((header) => (
+                      <option key={header} value={header}>
+                        {header}
+                      </option>
+                    ))}
+                  </>
+                ) : (
+                  <option value="">No data headers found</option>
+                )}
+              </select>
+            ) : (
+              <input
+                type="text"
+                placeholder={inputValuePlaceholder}
+                value={selectedStepData.value}
+                onChange={(event) => onChange("value", event.target.value)}
+                className="w-full rounded-lg border border-[#e5e5e5] px-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            )}
           </div>
           {inputKind === "date" && (
             <div>
@@ -173,18 +187,6 @@ export function ActionDetails({ selectedStepData, onChange }) {
               />
             </div>
           )}
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-2">
-              Timeout (ms)
-            </label>
-            <input
-              type="number"
-              placeholder="5000"
-              value={selectedStepData.timeoutMs}
-              onChange={(event) => onChange("timeoutMs", event.target.value)}
-              className="w-full rounded-lg border border-[#e5e5e5] px-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
         </div>
       );
     case "Wait":
@@ -215,18 +217,6 @@ export function ActionDetails({ selectedStepData, onChange }) {
             onChange={(event) => onChange("url", event.target.value)}
             className="w-full rounded-lg border border-[#e5e5e5] px-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-2">
-              Timeout (ms)
-            </label>
-            <input
-              type="number"
-              placeholder="5000"
-              value={selectedStepData.timeoutMs}
-              onChange={(event) => onChange("timeoutMs", event.target.value)}
-              className="w-full rounded-lg border border-[#e5e5e5] px-4 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
         </div>
       );
     default:

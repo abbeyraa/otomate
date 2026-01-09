@@ -246,7 +246,6 @@ export function useEditorHandlers(templateId = "") {
       dateFormat: "",
       value: "",
       label: "",
-      timeoutMs: "5000",
       waitMs: "",
       url: "",
     };
@@ -258,6 +257,24 @@ export function useEditorHandlers(templateId = "") {
       )
     );
     setSelectedStep({ groupId, stepId: newStep.id });
+  };
+
+  const handleAddSteps = (groupId, steps) => {
+    if (!Array.isArray(steps) || steps.length === 0) return 0;
+    const timestamp = Date.now();
+    const nextSteps = steps.map((step, index) => ({
+      id: `step-${timestamp}-${index}`,
+      ...step,
+    }));
+    setGroups((prev) =>
+      prev.map((group) =>
+        group.id === groupId
+          ? { ...group, steps: [...group.steps, ...nextSteps] }
+          : group
+      )
+    );
+    setSelectedStep({ groupId, stepId: nextSteps[0].id });
+    return nextSteps.length;
   };
 
   const handleDeleteStep = (groupId, stepId) => {
@@ -600,6 +617,7 @@ export function useEditorHandlers(templateId = "") {
     handleExpandAllGroups,
     handleCollapseAllGroups,
     handleAddStep,
+    handleAddSteps,
     handleDeleteStep,
     handleStepChange,
     handleDragStart,
@@ -632,7 +650,6 @@ export function useEditorHandlers(templateId = "") {
           dateFormat: "",
           value: "",
           label: "",
-          timeoutMs: "5000",
           waitMs: "",
           url: logEvent.data?.url || "",
         };
@@ -651,7 +668,6 @@ export function useEditorHandlers(templateId = "") {
             logEvent.data?.text ||
             logEvent.data?.selector ||
             "",
-          timeoutMs: "5000",
           waitMs: "",
           url: "",
         };

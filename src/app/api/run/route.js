@@ -3,6 +3,7 @@ import { chromium } from "playwright";
 import fs from "fs/promises";
 import path from "path";
 import { getPlaywrightContextOptions } from "../playwright-options.js";
+import { readSettings } from "../settings/settingsStorage.js";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -14,10 +15,9 @@ async function writeLog(data) {
   await fs.writeFile(LOG_PATH, JSON.stringify(data, null, 2), "utf-8");
 }
 
-async function resolveLocator(page, step) {
+async function resolveLocator(page, step, timeoutMs) {
   const label = step.label?.trim();
   const scopeSelector = step.scopeSelector?.trim();
-  const timeoutMs = Number.parseInt(step.timeoutMs, 10) || 5000;
   const inputKind = step.inputKind || "text";
   let scope = page;
 
@@ -105,10 +105,38 @@ function formatDateValue(raw, format) {
     .replace(/DD/g, dd);
 }
 
+async function waitForNavigationOrPopup(page, timeoutMs) {
+  const navigationPromise = page
+    .waitForNavigation({ timeout: timeoutMs, waitUntil: "domcontentloaded" })
+    .then(() => "navigation")
+    .catch(() => null);
+  const popupPromise = page
+    .waitForEvent("popup", { timeout: timeoutMs })
+    .then(() => "popup")
+    .catch(() => null);
+  const timeoutPromise = new Promise((resolve) =>
+    setTimeout(() => resolve(null), timeoutMs)
+  );
+  return Promise.race([navigationPromise, popupPromise, timeoutPromise]);
+}
+
+async function waitForPageIdle(page, timeoutMs) {
+  try {
+    await page.waitForLoadState("networkidle", { timeout: timeoutMs });
+  } catch {
+    // Ignore idle timeout to avoid blocking runs indefinitely.
+  }
+}
+
 export async function POST(request) {
   const payload = await request.json().catch(() => ({}));
   const targetUrl = payload.targetUrl?.trim() || "";
   const groups = Array.isArray(payload.groups) ? payload.groups : [];
+  const firstStep = groups.find((group) => group?.steps?.length)?.steps?.[0];
+  const shouldAutoNavigate = Boolean(targetUrl) && firstStep?.type !== "Navigate";
+  const settings = await readSettings();
+  const maxTimeoutMs = Number.parseInt(settings.maxTimeoutMs, 10) || 5000;
+  const idleTimeoutMs = maxTimeoutMs;
 
   const report = {
     type: "run",
@@ -121,18 +149,12 @@ export async function POST(request) {
   };
 
   const browser = await chromium.launch({ headless: false });
-  const context = await browser.newContext(getPlaywrightContextOptions());
-  await context.clearCookies();
+  const context = await browser.newContext(getPlaywrightContextOptions(settings));
   const page = await context.newPage();
-  await page.addInitScript(() => {
-    // Ensure a clean, incognito-like state for every run.
-    window.localStorage?.clear();
-    window.sessionStorage?.clear();
-  });
   await page.bringToFront();
 
   try {
-    if (targetUrl) {
+    if (shouldAutoNavigate) {
       await page.goto(targetUrl, { waitUntil: "domcontentloaded" });
       await page.bringToFront();
       report.steps.push({
@@ -159,16 +181,16 @@ export async function POST(request) {
           switch (step.type) {
             case "Click":
               {
-                const locator = await resolveLocator(page, step);
-                const timeoutMs = Number.parseInt(step.timeoutMs, 10) || 5000;
-                await locator.click({ timeout: timeoutMs });
+                const locator = await resolveLocator(page, step, maxTimeoutMs);
+                await locator.click({ timeout: maxTimeoutMs });
+                await waitForNavigationOrPopup(page, idleTimeoutMs);
+                await waitForPageIdle(page, idleTimeoutMs);
               }
               break;
             case "Input":
               {
-                const locator = await resolveLocator(page, step);
-                const timeoutMs = Number.parseInt(step.timeoutMs, 10) || 5000;
-                await locator.waitFor({ state: "visible", timeout: timeoutMs });
+                const locator = await resolveLocator(page, step, maxTimeoutMs);
+                await locator.waitFor({ state: "visible", timeout: maxTimeoutMs });
                 const inputKind = step.inputKind || "text";
                 const rawValue = step.value || "";
                 if (inputKind === "checkbox" || inputKind === "toggle") {
@@ -177,9 +199,9 @@ export async function POST(request) {
                     throw new Error("Checkbox value must be true or false");
                   }
                   if (desired) {
-                    await locator.check({ timeout: timeoutMs });
+                    await locator.check({ timeout: maxTimeoutMs });
                   } else {
-                    await locator.uncheck({ timeout: timeoutMs });
+                    await locator.uncheck({ timeout: maxTimeoutMs });
                   }
                   break;
                 }
@@ -193,7 +215,7 @@ export async function POST(request) {
                 }
 
                 if (inputKind === "radio") {
-                  await locator.check({ timeout: timeoutMs });
+                  await locator.check({ timeout: maxTimeoutMs });
                   break;
                 }
 
@@ -201,23 +223,28 @@ export async function POST(request) {
                   inputKind === "date"
                     ? formatDateValue(rawValue, step.dateFormat)
                     : rawValue;
-                await locator.fill(finalValue);
+                await locator.click({ timeout: maxTimeoutMs });
+                await locator.press("Control+A");
+                await locator.press("Backspace");
+                await locator.pressSequentially(finalValue, { delay: 100 });
+                await waitForPageIdle(page, idleTimeoutMs);
               }
               break;
             case "Wait":
               {
                 const ms = Number.parseInt(step.waitMs, 10) || 1000;
                 await page.waitForTimeout(ms);
+                await waitForPageIdle(page, idleTimeoutMs);
               }
               break;
             case "Navigate":
               if (!step.url) throw new Error("URL is required");
               {
-                const timeoutMs = Number.parseInt(step.timeoutMs, 10) || 5000;
                 await page.goto(step.url, {
                   waitUntil: "domcontentloaded",
-                  timeout: timeoutMs,
+                  timeout: maxTimeoutMs,
                 });
+                await waitForPageIdle(page, idleTimeoutMs);
               }
               break;
             default:

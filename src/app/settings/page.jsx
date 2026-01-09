@@ -1,14 +1,53 @@
 "use client";
 
 import { Settings as SettingsIcon } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState({
     language: "id",
+    maxTimeoutMs: 5000,
+    geoLat: "",
+    geoLng: "",
   });
   const [isResetting, setIsResetting] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+    const loadSettings = async () => {
+      try {
+        const response = await fetch("/api/settings", { cache: "no-store" });
+        if (!response.ok) return;
+        const payload = await response.json();
+        if (!isMounted) return;
+        if (payload?.settings) {
+          setSettings(payload.settings);
+        }
+      } catch {
+        // Ignore settings load failures.
+      } finally {
+        if (isMounted) setIsLoading(false);
+      }
+    };
+    loadSettings();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const saveSettings = async (nextSettings) => {
+    try {
+      await fetch("/api/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ settings: nextSettings }),
+      });
+    } catch {
+      // Ignore save errors to keep UI responsive.
+    }
+  };
 
   const handleToggle = (key) => {
     const newSettings = {
@@ -16,6 +55,7 @@ export default function SettingsPage() {
       [key]: !settings[key],
     };
     setSettings(newSettings);
+    saveSettings(newSettings);
   };
 
   const handleChange = (key, value) => {
@@ -24,6 +64,7 @@ export default function SettingsPage() {
       [key]: value,
     };
     setSettings(newSettings);
+    saveSettings(newSettings);
   };
 
   const handleResetData = async () => {
@@ -78,6 +119,30 @@ export default function SettingsPage() {
             { value: "id", label: "Bahasa Indonesia" },
             { value: "en", label: "English" },
           ],
+        },
+        {
+          key: "maxTimeoutMs",
+          label: "Max Timeout (ms)",
+          description: "Batas waktu maksimum untuk setiap langkah",
+          type: "input",
+          inputType: "number",
+          min: 1000,
+        },
+        {
+          key: "geoLat",
+          label: "Geo Latitude",
+          description: "Koordinat latitude untuk lokasi browser",
+          type: "input",
+          inputType: "text",
+          placeholder: "-6.200000",
+        },
+        {
+          key: "geoLng",
+          label: "Geo Longitude",
+          description: "Koordinat longitude untuk lokasi browser",
+          type: "input",
+          inputType: "text",
+          placeholder: "106.816666",
         },
         {
           key: "reset-data",
@@ -179,6 +244,26 @@ export default function SettingsPage() {
                           </select>
                         )}
 
+                        {setting.type === "input" && (
+                          <input
+                            type={setting.inputType || "text"}
+                            min={setting.min}
+                            placeholder={setting.placeholder}
+                            value={settings[setting.key] ?? ""}
+                            onChange={(event) => {
+                              const raw = event.target.value;
+                              const nextValue =
+                                setting.inputType === "number"
+                                  ? Number.isFinite(Number.parseInt(raw, 10))
+                                    ? Number.parseInt(raw, 10)
+                                    : settings[setting.key]
+                                  : raw;
+                              handleChange(setting.key, nextValue);
+                            }}
+                            className="px-3 py-2 border border-[#e5e5e5] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        )}
+
                         {setting.type === "button" && (
                           <button
                             onClick={setting.action}
@@ -201,6 +286,11 @@ export default function SettingsPage() {
           })}
         </div>
       </div>
+      {isLoading && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-white/70 text-sm font-semibold text-gray-500">
+          Loading settings...
+        </div>
+      )}
       {showResetConfirm && (
         <div className="fixed inset-0 z-50 flex h-screen w-screen items-center justify-center bg-black/40 backdrop-blur-[1px] p-4">
           <div className="w-full max-w-md rounded-xl bg-white shadow-xl">
