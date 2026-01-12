@@ -173,7 +173,8 @@ export async function POST(request) {
     });
   }
 
-  await page.waitForEvent("close");
+  // Wait for the user to close the window; Playwright's default timeout is 30s.
+  await page.waitForEvent("close", { timeout: 0 });
   await context.close().catch(() => {});
   await browser.close().catch(() => {});
 
