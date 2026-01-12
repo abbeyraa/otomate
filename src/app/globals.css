@@ -36,3 +36,29 @@ body {
 *::-webkit-scrollbar {
   display: none;
 }
+
+.home-reveal {
+  opacity: 0;
+  transform: translateY(16px);
+  animation: home-reveal 0.9s ease forwards;
+  animation-delay: var(--delay, 0ms);
+}
+
+@keyframes home-reveal {
+  0% {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-reveal {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}

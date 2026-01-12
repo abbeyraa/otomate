@@ -170,7 +170,8 @@ export default function SettingsPage() {
             return (
               <div
                 key={section.title}
-                className="bg-white border border-[#e5e5e5] rounded-lg p-6"
+                className="home-reveal bg-white border border-[#e5e5e5] rounded-lg p-6"
+                style={{ "--delay": "120ms" }}
               >
                 <div className="flex items-center gap-3 mb-6">
                   <div className="p-2 bg-blue-50 rounded-lg">

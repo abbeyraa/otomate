@@ -248,7 +248,10 @@ export default function DataPage() {
   return (
     <div className="min-h-screen bg-[#f6f7fb]">
       <div className="mx-auto max-w-6xl px-6 py-10 space-y-8">
-        <div className="flex flex-wrap items-center justify-between gap-4">
+        <div
+          className="home-reveal flex flex-wrap items-center justify-between gap-4"
+          style={{ "--delay": "80ms" }}
+        >
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-gray-400">
               Data Manager
@@ -280,7 +283,10 @@ export default function DataPage() {
 
         {data ? (
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.1fr,0.9fr]">
-            <section className="rounded-2xl border border-[#e5e5e5] bg-white p-6 shadow-sm">
+            <section
+              className="home-reveal rounded-2xl border border-[#e5e5e5] bg-white p-6 shadow-sm"
+              style={{ "--delay": "160ms" }}
+            >
               <h2 className="text-base font-semibold text-gray-900">
                 Saved data
               </h2>
@@ -304,7 +310,10 @@ export default function DataPage() {
                 </p>
               </div>
             </section>
-            <section className="rounded-2xl border border-[#e5e5e5] bg-white p-6 shadow-sm">
+            <section
+              className="home-reveal rounded-2xl border border-[#e5e5e5] bg-white p-6 shadow-sm"
+              style={{ "--delay": "240ms" }}
+            >
               <h2 className="text-base font-semibold text-gray-900">
                 Table settings
               </h2>
@@ -332,7 +341,10 @@ export default function DataPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.1fr,0.9fr]">
-            <section className="rounded-2xl border border-[#e5e5e5] bg-white p-6 shadow-sm">
+            <section
+              className="home-reveal rounded-2xl border border-[#e5e5e5] bg-white p-6 shadow-sm"
+              style={{ "--delay": "160ms" }}
+            >
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <h2 className="text-base font-semibold text-gray-900">
@@ -429,7 +441,10 @@ export default function DataPage() {
               </div>
             </section>
 
-            <section className="rounded-2xl border border-[#e5e5e5] bg-white p-6 shadow-sm">
+            <section
+              className="home-reveal rounded-2xl border border-[#e5e5e5] bg-white p-6 shadow-sm"
+              style={{ "--delay": "240ms" }}
+            >
               <h2 className="text-base font-semibold text-gray-900">
                 Saved data
               </h2>
@@ -443,7 +458,10 @@ export default function DataPage() {
         )}
 
         {data?.sheets?.length ? (
-          <section className="rounded-2xl border border-[#e5e5e5] bg-white shadow-sm">
+          <section
+            className="home-reveal rounded-2xl border border-[#e5e5e5] bg-white shadow-sm"
+            style={{ "--delay": "320ms" }}
+          >
             <div className="flex items-center gap-2 border-b border-[#e5e5e5] px-6 py-3 overflow-x-auto">
               {data.sheets.map((sheet) => {
                 const isActive = sheet.name === activeSheet;

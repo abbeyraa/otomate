@@ -44,10 +44,11 @@ export default function HomePage() {
                   title: "Use Case",
                   desc: "Contoh tombol “Masuk” dengan data-*",
                 },
-              ].map((item) => (
+              ].map((item, index) => (
                 <div
                   key={item.title}
-                  className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm"
+                  className="home-reveal rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm"
+                  style={{ "--delay": `${index * 100}ms` }}
                 >
                   <p className="text-xs font-semibold uppercase tracking-widest text-slate-500">
                     {item.title}
@@ -73,11 +74,12 @@ export default function HomePage() {
                   desc: "Atur browser dan output.",
                   href: "/settings",
                 },
-              ].map((card) => (
+              ].map((card, index) => (
                 <a
                   key={card.title}
                   href={card.href}
-                  className="group rounded-2xl border border-slate-200 bg-white px-4 py-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md"
+                  className="home-reveal group rounded-2xl border border-slate-200 bg-white px-4 py-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md"
+                  style={{ "--delay": `${index * 100 + 160}ms` }}
                 >
                   <p className="text-xs font-semibold uppercase tracking-widest text-slate-500">
                     Quick Start
@@ -95,7 +97,7 @@ export default function HomePage() {
           </div>
 
           <div className="flex flex-col gap-4">
-            <div className="rounded-3xl border border-slate-200 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-6 text-white shadow-xl">
+            <div className="home-reveal rounded-3xl border border-slate-200 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-6 text-white shadow-xl">
               <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-300">
                 Checklist
               </p>
@@ -111,7 +113,7 @@ export default function HomePage() {
               </ul>
             </div>
 
-            <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-md">
+            <div className="home-reveal rounded-3xl border border-slate-200 bg-white p-6 shadow-md">
               <h3 className="text-sm font-semibold uppercase tracking-[0.3em] text-slate-500">
                 Tips Stabil
               </h3>
@@ -135,7 +137,7 @@ export default function HomePage() {
         </div>
 
         <div className="grid items-start gap-6 lg:grid-cols-[0.9fr_1.1fr]">
-          <div className="rounded-3xl border border-slate-200 bg-white/90 p-6 shadow-lg">
+          <div className="home-reveal rounded-3xl border border-slate-200 bg-white/90 p-6 shadow-lg">
             <h2 className="text-lg font-semibold text-slate-900">
               Expandable Guide
             </h2>
@@ -197,10 +199,11 @@ export default function HomePage() {
                     </div>
                   ),
                 },
-              ].map((item) => (
+              ].map((item, index) => (
                 <details
                   key={item.title}
-                  className="group rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm"
+                  className="home-reveal group rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm"
+                  style={{ "--delay": `${index * 100}ms` }}
                 >
                   <summary className="flex cursor-pointer items-center justify-between text-sm font-semibold text-slate-800">
                     {item.title}
@@ -216,7 +219,7 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div className="self-start rounded-3xl border border-slate-200 bg-white/95 p-6 shadow-lg">
+          <div className="home-reveal self-start rounded-3xl border border-slate-200 bg-white/95 p-6 shadow-lg">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <h2 className="text-lg font-semibold text-slate-900">
@@ -232,7 +235,7 @@ export default function HomePage() {
               </span>
             </div>
 
-            <details className="group mt-4 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+            <details className="home-reveal group mt-4 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
               <summary className="flex cursor-pointer items-center justify-between text-sm font-semibold text-slate-800">
                 Contoh tombol &quot;Masuk&quot;
                 <span className="ml-4 inline-flex h-6 w-6 items-center justify-center rounded-full border border-slate-200 text-xs text-slate-500 transition group-open:rotate-45">
@@ -272,7 +275,7 @@ export default function HomePage() {
               </div>
             </details>
 
-            <details className="group mt-4 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+            <details className="home-reveal group mt-4 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
               <summary className="flex cursor-pointer items-center justify-between text-sm font-semibold text-slate-800">
                 Alternatif selector cepat
                 <span className="ml-4 inline-flex h-6 w-6 items-center justify-center rounded-full border border-slate-200 text-xs text-slate-500 transition group-open:rotate-45">
@@ -301,7 +304,7 @@ export default function HomePage() {
           </div>
         </div>
 
-        <div className="rounded-3xl border border-slate-200 bg-white/90 p-6 shadow-lg">
+        <div className="home-reveal rounded-3xl border border-slate-200 bg-white/90 p-6 shadow-lg">
           <div className="flex items-center justify-between gap-4">
             <div>
               <h2 className="text-lg font-semibold text-slate-900">FAQ</h2>
@@ -339,10 +342,11 @@ export default function HomePage() {
                 q: "Mengapa Click tidak jalan?",
                 a: "Cek Label/Text sesuai UI dan tambahkan Scope Selector jika ada banyak elemen serupa.",
               },
-            ].map((item) => (
+            ].map((item, index) => (
               <details
                 key={item.q}
-                className="group mb-3 break-inside-avoid rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm"
+                className="home-reveal group mb-3 break-inside-avoid rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm"
+                style={{ "--delay": `${index * 80}ms` }}
               >
                 <summary className="flex cursor-pointer items-center justify-between text-sm font-semibold text-slate-800">
                   {item.q}

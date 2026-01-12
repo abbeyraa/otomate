@@ -53,13 +53,19 @@ export default function TemplatesPage() {
   return (
     <div className="h-full flex flex-col p-8">
       <div className="max-w-5xl mx-auto w-full space-y-6">
-        <div className="flex items-center justify-between">
+        <div
+          className="home-reveal flex items-center justify-between"
+          style={{ "--delay": "80ms" }}
+        >
           <h1 className="text-lg font-semibold text-gray-900">Template</h1>
           <span className="text-xs text-gray-500">
             {isHydrated ? `${templates.length} tersimpan` : "..."}
           </span>
         </div>
-        <div className="bg-white border border-[#e5e5e5] rounded-lg">
+        <div
+          className="home-reveal bg-white border border-[#e5e5e5] rounded-lg"
+          style={{ "--delay": "160ms" }}
+        >
           {openError && (
             <div className="px-6 py-4 text-sm text-red-700 bg-red-50 border-b border-red-100">
               {openError}
@@ -176,10 +182,11 @@ export default function TemplatesPage() {
             </div>
           ) : (
             <div className="divide-y divide-[#e5e5e5]">
-              {templates.map((template) => (
+              {templates.map((template, index) => (
                 <div
                   key={template.id}
-                  className="px-6 py-4 flex items-center justify-between"
+                  className="home-reveal px-6 py-4 flex items-center justify-between"
+                  style={{ "--delay": `${220 + index * 60}ms` }}
                 >
                   <div>
                     <p className="text-sm font-semibold text-gray-900">
