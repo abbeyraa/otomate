@@ -73,10 +73,12 @@ async function resolveLocator(page, step, timeoutMs) {
           candidates.push(scope.getByRole("spinbutton", { name: label }));
           candidates.push(scope.getByLabel(label));
           candidates.push(scope.getByRole("textbox", { name: label }));
+          candidates.push(scope.getByPlaceholder(label));
           break;
         default:
           candidates.push(scope.getByRole("textbox", { name: label }));
           candidates.push(scope.getByLabel(label));
+          candidates.push(scope.getByPlaceholder(label));
           break;
       }
     }
@@ -89,6 +91,34 @@ async function resolveLocator(page, step, timeoutMs) {
       return resolved;
     } catch {
       // Try the next locator candidate.
+    }
+  }
+
+  if (step.type === "Input" && label) {
+    const escapedLabel = label.replace(/["\\]/g, "\\$&");
+    const labelLocator = scope
+      .locator(`label:has-text("${escapedLabel}")`)
+      .first();
+    try {
+      await labelLocator.waitFor({ state: "visible", timeout: timeoutMs });
+      const siblingField = labelLocator
+        .locator(
+          "xpath=following-sibling::input | following-sibling::textarea | following-sibling::select"
+        )
+        .first();
+      await siblingField.waitFor({ state: "visible", timeout: timeoutMs });
+      return siblingField;
+    } catch {
+      try {
+        const container = labelLocator.locator("xpath=..");
+        const field = container
+          .locator("input, textarea, select")
+          .first();
+        await field.waitFor({ state: "visible", timeout: timeoutMs });
+        return field;
+      } catch {
+        // Fall through to standard error handling.
+      }
     }
   }
 
