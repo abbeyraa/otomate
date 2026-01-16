@@ -9,6 +9,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const LOG_PATH = path.join(process.cwd(), "data", "inspect-log.json");
+const DATA_PATH = path.join(process.cwd(), "files", "data-source.json");
 
 async function writeLog(data) {
   await fs.mkdir(path.dirname(LOG_PATH), { recursive: true });
@@ -24,6 +25,73 @@ const allowedInputKinds = new Set([
   "toggle",
   "select",
 ]);
+
+const toColumnLabel = (index) => {
+  let label = "";
+  let value = index + 1;
+  while (value > 0) {
+    const remainder = (value - 1) % 26;
+    label = String.fromCharCode(65 + remainder) + label;
+    value = Math.floor((value - 1) / 26);
+  }
+  return label;
+};
+
+const getSheetColumns = (sheet, hasHeader) => {
+  if (!sheet) return [];
+  const maxColumns = sheet.maxColumns ?? sheet.columns?.length ?? 0;
+  if (hasHeader && sheet.rows?.length) {
+    const headerRow = Array.isArray(sheet.rows[0]) ? sheet.rows[0] : [];
+    return Array.from({ length: maxColumns }, (_, index) => {
+      const raw = headerRow[index];
+      const cleaned =
+        raw === null || raw === undefined ? "" : String(raw).trim();
+      return cleaned || sheet.columns?.[index] || toColumnLabel(index);
+    });
+  }
+  if (sheet.columns?.length) return sheet.columns;
+  return Array.from({ length: maxColumns }, (_, index) => toColumnLabel(index));
+};
+
+const getSheetRows = (sheet, hasHeader) => {
+  if (!sheet?.rows?.length) return [];
+  return hasHeader ? sheet.rows.slice(1) : sheet.rows;
+};
+
+const buildHeaderIndex = (headers) => {
+  const index = new Map();
+  headers.forEach((header, idx) => {
+    const key = String(header || "").trim();
+    if (key && !index.has(key)) {
+      index.set(key, idx);
+    }
+  });
+  return index;
+};
+
+const normalizeRowValue = (value) => {
+  if (value === null || value === undefined) return "";
+  return String(value);
+};
+
+const resolveStepWithData = (step, row, headerIndex) => {
+  if (!step || step.type !== "Input") return step;
+  const key = String(step.value || "").trim();
+  if (!key || !headerIndex?.has(key)) return step;
+  const rowValues = Array.isArray(row) ? row : [];
+  const columnIndex = headerIndex.get(key);
+  const resolvedValue = normalizeRowValue(rowValues[columnIndex]);
+  return { ...step, value: resolvedValue };
+};
+
+async function loadDataSource() {
+  try {
+    const raw = await fs.readFile(DATA_PATH, "utf-8");
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
 
 async function resolveLocator(page, step, timeoutMs) {
   const label = step.label?.trim();
@@ -210,6 +278,12 @@ export async function POST(request) {
   const settings = await readSettings();
   const maxTimeoutMs = Number.parseInt(settings.maxTimeoutMs, 10) || 5000;
   const idleTimeoutMs = maxTimeoutMs;
+  const storedData = await loadDataSource();
+  const hasHeader = Boolean(storedData?.hasHeader);
+  const activeSheet = storedData?.sheets?.[0] || null;
+  const dataHeaders = getSheetColumns(activeSheet, hasHeader);
+  const dataRows = getSheetRows(activeSheet, hasHeader);
+  const headerIndex = buildHeaderIndex(dataHeaders);
 
   const report = {
     type: "run",
@@ -241,118 +315,150 @@ export async function POST(request) {
 
     for (const group of groups) {
       const steps = Array.isArray(group.steps) ? group.steps : [];
-      for (const step of steps) {
-        const stepReport = {
-          group: group.name || group.id || "Group",
-          step: step.title || step.id || "Step",
-          action: step.type || "Unknown",
-          status: "pending",
-          ts: new Date().toISOString(),
-        };
+      const useData =
+        group?.repeat?.enabled &&
+        group?.repeat?.mode === "data" &&
+        group?.repeat?.useData !== false &&
+        dataRows.length > 0;
+      const repeatCount = Number.parseInt(group?.repeat?.count, 10);
+      const maxIterations = useData
+        ? Number.isFinite(repeatCount)
+          ? Math.min(repeatCount, dataRows.length)
+          : dataRows.length
+        : 1;
 
-        try {
-          if (!step?.type) {
-            throw new Error("Action type is required");
-          }
-          if (step.type === "Input" && !allowedInputKinds.has(step.inputKind || "text")) {
-            throw new Error("Input kind is invalid");
-          }
-          switch (step.type) {
-            case "Click":
-              {
-                const locator = await resolveLocator(page, step, maxTimeoutMs);
-                await locator.click({ timeout: maxTimeoutMs });
-                await waitForNavigationOrPopup(page, idleTimeoutMs);
-                await waitForPageIdle(page, idleTimeoutMs);
-              }
-              break;
-            case "Input":
-              {
-                const locator = await resolveLocator(page, step, maxTimeoutMs);
-                await locator.waitFor({ state: "visible", timeout: maxTimeoutMs });
-                const inputKind = step.inputKind || "text";
-                const rawValue = step.value || "";
-                if (inputKind === "number" && !rawValue) {
-                  throw new Error("Number value is required");
-                }
-                if (inputKind === "date" && !rawValue) {
-                  throw new Error("Date value is required");
-                }
-                if (inputKind === "checkbox" || inputKind === "toggle") {
-                  const desired = normalizeBooleanValue(rawValue);
-                  if (desired === null) {
-                    throw new Error("Checkbox value must be true or false");
-                  }
-                  if (desired) {
-                    await locator.check({ timeout: maxTimeoutMs });
-                  } else {
-                    await locator.uncheck({ timeout: maxTimeoutMs });
-                  }
-                  break;
-                }
-
-                if (inputKind === "select") {
-                  if (!rawValue) {
-                    throw new Error("Option value is required");
-                  }
-                  await locator.selectOption({ value: rawValue });
-                  break;
-                }
-
-                if (inputKind === "radio") {
-                  await locator.click({ timeout: maxTimeoutMs });
-                  break;
-                }
-
-                const finalValue =
-                  inputKind === "date"
-                    ? formatDateValue(rawValue, step.dateFormat)
-                    : rawValue;
-                await locator.click({ timeout: maxTimeoutMs });
-                await locator.press("Control+A");
-                await locator.press("Backspace");
-                await locator.pressSequentially(finalValue, { delay: 100 });
-                await waitForPageIdle(page, idleTimeoutMs);
-              }
-              break;
-            case "Wait":
-              {
-                const ms = Number.parseInt(step.waitMs, 10) || 1000;
-                await page.waitForTimeout(ms);
-                await waitForPageIdle(page, idleTimeoutMs);
-              }
-              break;
-            case "Navigate":
-              if (!step.url) throw new Error("URL is required");
-              {
-                await page.goto(step.url, {
-                  waitUntil: "domcontentloaded",
-                  timeout: maxTimeoutMs,
-                });
-                await waitForPageIdle(page, idleTimeoutMs);
-              }
-              break;
-            default:
-              throw new Error("Unsupported action type");
-          }
-
-          stepReport.status = "success";
-        } catch (error) {
-          const contextLabel = `${stepReport.group} / ${stepReport.step}`;
-          const message = `${contextLabel}: ${error.message}`;
-          stepReport.status = "failed";
-          stepReport.error = message;
-          report.steps.push(stepReport);
-          report.status = "failed";
-          report.error = {
-            message,
-            group: stepReport.group,
-            step: stepReport.step,
+      for (let iteration = 0; iteration < maxIterations; iteration += 1) {
+        const row = useData ? dataRows[iteration] : null;
+        for (const step of steps) {
+          const stepReport = {
+            group: group.name || group.id || "Group",
+            step: step.title || step.id || "Step",
+            action: step.type || "Unknown",
+            status: "pending",
+            ts: new Date().toISOString(),
           };
-          throw error;
-        }
 
-        report.steps.push(stepReport);
+          try {
+            const resolvedStep = useData
+              ? resolveStepWithData(step, row, headerIndex)
+              : step;
+            if (!resolvedStep?.type) {
+              throw new Error("Action type is required");
+            }
+            if (
+              resolvedStep.type === "Input" &&
+              !allowedInputKinds.has(resolvedStep.inputKind || "text")
+            ) {
+              throw new Error("Input kind is invalid");
+            }
+            switch (resolvedStep.type) {
+              case "Click":
+                {
+                  const locator = await resolveLocator(
+                    page,
+                    resolvedStep,
+                    maxTimeoutMs
+                  );
+                  await locator.click({ timeout: maxTimeoutMs });
+                  await waitForNavigationOrPopup(page, idleTimeoutMs);
+                  await waitForPageIdle(page, idleTimeoutMs);
+                }
+                break;
+              case "Input":
+                {
+                  const locator = await resolveLocator(
+                    page,
+                    resolvedStep,
+                    maxTimeoutMs
+                  );
+                  await locator.waitFor({
+                    state: "visible",
+                    timeout: maxTimeoutMs,
+                  });
+                  const inputKind = resolvedStep.inputKind || "text";
+                  const rawValue = resolvedStep.value || "";
+                  if (inputKind === "number" && !rawValue) {
+                    throw new Error("Number value is required");
+                  }
+                  if (inputKind === "date" && !rawValue) {
+                    throw new Error("Date value is required");
+                  }
+                  if (inputKind === "checkbox" || inputKind === "toggle") {
+                    const desired = normalizeBooleanValue(rawValue);
+                    if (desired === null) {
+                      throw new Error("Checkbox value must be true or false");
+                    }
+                    if (desired) {
+                      await locator.check({ timeout: maxTimeoutMs });
+                    } else {
+                      await locator.uncheck({ timeout: maxTimeoutMs });
+                    }
+                    break;
+                  }
+
+                  if (inputKind === "select") {
+                    if (!rawValue) {
+                      throw new Error("Option value is required");
+                    }
+                    await locator.selectOption({ value: rawValue });
+                    break;
+                  }
+
+                  if (inputKind === "radio") {
+                    await locator.click({ timeout: maxTimeoutMs });
+                    break;
+                  }
+
+                  const finalValue =
+                    inputKind === "date"
+                      ? formatDateValue(rawValue, resolvedStep.dateFormat)
+                      : rawValue;
+                  await locator.click({ timeout: maxTimeoutMs });
+                  await locator.press("Control+A");
+                  await locator.press("Backspace");
+                  await locator.pressSequentially(finalValue, { delay: 100 });
+                  await waitForPageIdle(page, idleTimeoutMs);
+                }
+                break;
+              case "Wait":
+                {
+                  const ms = Number.parseInt(resolvedStep.waitMs, 10) || 1000;
+                  await page.waitForTimeout(ms);
+                  await waitForPageIdle(page, idleTimeoutMs);
+                }
+                break;
+              case "Navigate":
+                if (!resolvedStep.url) throw new Error("URL is required");
+                {
+                  await page.goto(resolvedStep.url, {
+                    waitUntil: "domcontentloaded",
+                    timeout: maxTimeoutMs,
+                  });
+                  await waitForPageIdle(page, idleTimeoutMs);
+                }
+                break;
+              default:
+                throw new Error("Unsupported action type");
+            }
+
+            stepReport.status = "success";
+          } catch (error) {
+            const contextLabel = `${stepReport.group} / ${stepReport.step}`;
+            const message = `${contextLabel}: ${error.message}`;
+            stepReport.status = "failed";
+            stepReport.error = message;
+            report.steps.push(stepReport);
+            report.status = "failed";
+            report.error = {
+              message,
+              group: stepReport.group,
+              step: stepReport.step,
+            };
+            throw error;
+          }
+
+          report.steps.push(stepReport);
+        }
       }
     }
 
